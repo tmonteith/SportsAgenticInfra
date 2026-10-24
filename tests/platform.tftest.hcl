@@ -50,12 +50,12 @@ run "test_platform_module" {
 
   # Scoped IAM NoSQL Policy assertions
   assert {
-    condition     = contains(oci_identity_policy.nosql_mcp_access.statements, "Allow dynamic-group 'Default'/'sportsagentic-mcp-nodes-dg' to read nosql-tables in compartment sportsagentic")
+    condition     = contains(oci_identity_policy.nosql_mcp_access.statements, "Allow dynamic-group sportsagentic-mcp-nodes-dg to read nosql-tables in compartment sportsagentic")
     error_message = "NoSQL IAM policy must grant read nosql-tables to the MCP dynamic group"
   }
 
   assert {
-    condition     = contains(oci_identity_policy.nosql_mcp_access.statements, "Allow dynamic-group 'Default'/'sportsagentic-mcp-nodes-dg' to read nosql-rows in compartment sportsagentic")
+    condition     = contains(oci_identity_policy.nosql_mcp_access.statements, "Allow dynamic-group sportsagentic-mcp-nodes-dg to read nosql-rows in compartment sportsagentic")
     error_message = "NoSQL IAM policy must grant read nosql-rows to the MCP dynamic group"
   }
 

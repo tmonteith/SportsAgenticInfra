@@ -103,7 +103,7 @@ resource "oci_identity_customer_secret_key" "ci_s3_key" {
 
 # Local helper to handle Identity Domain vs Classic IAM group naming
 locals {
-  group_ref = var.identity_domain_name != "" ? "'${var.identity_domain_name}'/'${oci_identity_group.ci_group.name}'" : oci_identity_group.ci_group.name
+  group_ref = (var.identity_domain_name != "" && lower(var.identity_domain_name) != "default") ? "'${var.identity_domain_name}'/'${oci_identity_group.ci_group.name}'" : oci_identity_group.ci_group.name
 }
 
 # 9. Scoped IAM Policy for CI Pipeline
@@ -118,17 +118,10 @@ resource "oci_identity_policy" "ci_policy" {
 
     # Read/inspect tenancy metadata needed by the OCI provider
     "Allow group ${local.group_ref} to read compartments in tenancy",
-    "Allow group ${local.group_ref} to inspect tenancy in tenancy",
-
-    # S3 backend state bucket and object permissions
-    "Allow group ${local.group_ref} to manage buckets in compartment ${oci_identity_compartment.sportsagentic.name} where target.bucket.name = '${var.tfstate_bucket_name}'",
-    "Allow group ${local.group_ref} to manage objects in compartment ${oci_identity_compartment.sportsagentic.name} where target.bucket.name = '${var.tfstate_bucket_name}'",
+    "Allow group ${local.group_ref} to inspect tenancies in tenancy",
 
     # Dynamic group management (needed for OKE worker nodes & cluster registration)
-    "Allow group ${local.group_ref} to manage dynamic-groups in tenancy",
-
-    # DNS zone management for sportagentic.dev
-    "Allow group ${local.group_ref} to manage dns in compartment ${oci_identity_compartment.sportsagentic.name}"
+    "Allow group ${local.group_ref} to manage dynamic-groups in tenancy"
   ]
 
   freeform_tags = {

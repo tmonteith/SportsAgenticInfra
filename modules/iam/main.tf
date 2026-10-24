@@ -1,8 +1,8 @@
 locals {
-  domain_prefix    = var.identity_domain_name != "" ? "'${var.identity_domain_name}'/" : ""
-  oke_nodes_dg_ref = "${local.domain_prefix}'${oci_identity_dynamic_group.oke_nodes.name}'"
-  mcp_nodes_dg_ref = "${local.domain_prefix}'${oci_identity_dynamic_group.mcp_nodes.name}'"
-  app_ci_group_ref = "${local.domain_prefix}'${oci_identity_group.app_ci_group.name}'"
+  domain_prefix    = (var.identity_domain_name != "" && lower(var.identity_domain_name) != "default") ? "'${var.identity_domain_name}'/" : ""
+  oke_nodes_dg_ref = "${local.domain_prefix}${oci_identity_dynamic_group.oke_nodes.name}"
+  mcp_nodes_dg_ref = "${local.domain_prefix}${oci_identity_dynamic_group.mcp_nodes.name}"
+  app_ci_group_ref = "${local.domain_prefix}${oci_identity_group.app_ci_group.name}"
 }
 
 # 1. Dynamic Group for OKE Worker Nodes (for joining cluster and pulling OCIR images)

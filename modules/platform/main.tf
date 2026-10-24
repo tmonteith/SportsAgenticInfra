@@ -1,6 +1,6 @@
 locals {
-  domain_prefix    = var.identity_domain_name != "" ? "'${var.identity_domain_name}'/" : ""
-  mcp_nodes_dg_ref = "${local.domain_prefix}'${var.mcp_nodes_dynamic_group_name}'"
+  domain_prefix    = (var.identity_domain_name != "" && lower(var.identity_domain_name) != "default") ? "'${var.identity_domain_name}'/" : ""
+  mcp_nodes_dg_ref = "${local.domain_prefix}${var.mcp_nodes_dynamic_group_name}"
 }
 
 # 1. OCIR Container Repositories
