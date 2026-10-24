@@ -3,6 +3,37 @@ variable "tenancy_ocid" {
   type        = string
 }
 
+variable "user_ocid" {
+  description = "The User OCID for OCI API authentication."
+  type        = string
+  default     = null
+}
+
+variable "fingerprint" {
+  description = "The fingerprint of the OCI API private key."
+  type        = string
+  default     = null
+}
+
+variable "private_key" {
+  description = "The PEM contents of the OCI API private key."
+  type        = string
+  default     = null
+  sensitive   = true
+}
+
+variable "private_key_path" {
+  description = "Path to the OCI API private key file."
+  type        = string
+  default     = null
+}
+
+variable "config_file_profile" {
+  description = "The profile name to use from ~/.oci/config."
+  type        = string
+  default     = null
+}
+
 variable "region" {
   description = "The OCI region to provision resources in (e.g. us-ashburn-1, us-phoenix-1)."
   type        = string

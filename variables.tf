@@ -28,6 +28,12 @@ variable "private_key_path" {
   default     = null
 }
 
+variable "config_file_profile" {
+  description = "The profile name to use from ~/.oci/config."
+  type        = string
+  default     = null
+}
+
 variable "region" {
   description = "The OCI region."
   type        = string
