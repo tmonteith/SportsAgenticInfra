@@ -66,6 +66,7 @@ resource "oci_identity_user" "app_ci_user" {
   compartment_id = var.tenancy_ocid
   name           = "${var.prefix}-app-ci"
   description    = "Service account for SportsAgentic app deployment pipeline (OCIR push & OKE deploy)"
+  email = var.email
 
   freeform_tags = {
     "Project"   = "SportsAgentic"
@@ -94,4 +95,3 @@ resource "oci_identity_policy" "app_ci_policy" {
     "ManagedBy" = "OpenTofu"
   }
 }
-

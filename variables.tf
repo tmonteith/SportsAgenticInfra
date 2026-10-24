@@ -72,7 +72,7 @@ variable "cluster_type" {
 variable "k8s_version" {
   description = "Kubernetes version for OKE cluster and node pools."
   type        = string
-  default     = "v1.31.1"
+  default     = "v1.34.0"
 }
 
 variable "domain_name" {
@@ -127,4 +127,10 @@ variable "letsencrypt_email" {
   description = "Email address for Let's Encrypt certificate notices."
   type        = string
   default     = "admin@sportagentic.dev"
+}
+
+variable "email" {
+  description = "Email of the user apply terraform"
+  type        = string
+  default     = null
 }

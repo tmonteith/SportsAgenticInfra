@@ -26,3 +26,8 @@ variable "prefix" {
   default     = "sportsagentic"
 }
 
+variable "email" {
+  description = "Email of the user apply terraform"
+  type        = string
+  default     = null
+}

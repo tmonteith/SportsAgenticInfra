@@ -20,6 +20,7 @@ module "iam" {
   compartment_name     = var.compartment_name
   identity_domain_name = var.identity_domain_name
   prefix               = var.prefix
+  email                = var.email
 }
 
 # 3. OKE Cluster Module (Control Plane + Services Pool + Model Pool @ 0)
