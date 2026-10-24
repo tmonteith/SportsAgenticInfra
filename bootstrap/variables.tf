@@ -37,7 +37,7 @@ variable "config_file_profile" {
 variable "region" {
   description = "The OCI region to provision resources in (e.g. us-ashburn-1, us-phoenix-1)."
   type        = string
-  default     = "us-ashburn-1"
+  default     = "us-chicago-1"
 }
 
 variable "identity_domain_name" {
@@ -62,4 +62,10 @@ variable "tfstate_bucket_name" {
   description = "Name of the private Object Storage bucket for OpenTofu state."
   type        = string
   default     = "sportsagentic-tfstate"
+}
+
+variable "email" {
+  description = "Email of the user apply terraform"
+  type        = string
+  default     = null
 }

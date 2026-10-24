@@ -70,6 +70,7 @@ resource "oci_identity_user" "ci_user" {
   compartment_id = var.tenancy_ocid
   name           = "${var.compartment_name}-ci"
   description    = "Service account user for GitHub Actions OpenTofu automation"
+  email = "${var.email}"
 
   freeform_tags = {
     "Project"   = "SportsAgentic"
