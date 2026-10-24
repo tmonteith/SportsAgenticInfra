@@ -5,18 +5,28 @@ data "oci_identity_availability_domains" "ads" {
 
 # 2. Discover OKE-ready node images
 data "oci_containerengine_node_pool_option" "oke" {
-  node_pool_option_id = "all"
-  compartment_id      = var.compartment_id
+  node_pool_option_id   = "all"
+  compartment_id        = var.compartment_id
+  node_pool_k8s_version = var.k8s_version
 }
 
 locals {
+  k8s_version_clean = replace(var.k8s_version, "v", "")
+  arm_sources_matching_version = [
+    for source in data.oci_containerengine_node_pool_option.oke.sources :
+    source.image_id
+    if length(regexall(".*aarch64.*", lower(source.source_name))) > 0 &&
+    length(regexall(".*${local.k8s_version_clean}.*", source.source_name)) > 0
+  ]
   arm_sources = [
     for source in data.oci_containerengine_node_pool_option.oke.sources :
     source.image_id
     if length(regexall(".*aarch64.*", lower(source.source_name))) > 0
   ]
   node_image_id = var.node_image_id != "" ? var.node_image_id : (
-    length(local.arm_sources) > 0 ? local.arm_sources[0] : data.oci_containerengine_node_pool_option.oke.sources[0].image_id
+    length(local.arm_sources_matching_version) > 0 ? local.arm_sources_matching_version[0] : (
+      length(local.arm_sources) > 0 ? local.arm_sources[0] : data.oci_containerengine_node_pool_option.oke.sources[0].image_id
+    )
   )
 }
 
