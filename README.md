@@ -69,7 +69,20 @@ SportsAgenticInfra/
 ├── docs/
 │   ├── authentication.md          # CI/CD authentication architecture & OIDC limitation analysis
 │   ├── bootstrap.md               # Step-by-step bootstrap execution guide
-│   └── dns-setup.md               # Porkbun to OCI DNS delegation guide
+│   ├── dns-setup.md               # Porkbun to OCI DNS delegation guide
+│   └── testing.md                 # Complete guide for tofu test, Checkov, and Terratest
+├── tests/                         # Native OpenTofu unit test suite (mock_provider)
+│   ├── network.tftest.hcl
+│   ├── oke.tftest.hcl
+│   └── platform.tftest.hcl
+├── test/                          # Terratest suite in Go
+│   ├── go.mod
+│   ├── go.sum
+│   ├── network_test.go
+│   ├── oke_test.go
+│   ├── platform_test.go
+│   └── test_helpers.go
+├── .checkov.yaml                  # Checkov security scanner policy configuration
 ├── main.tf                        # Root orchestration
 ├── backend.tf                     # S3-compatible remote state on OCI Object Storage
 ├── providers.tf                   # oracle/oci, kubernetes, helm providers

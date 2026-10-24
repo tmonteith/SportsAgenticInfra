@@ -32,13 +32,14 @@ resource "oci_identity_compartment" "sportsagentic" {
 
 # 2. Remote State Object Storage Bucket (Versioned & Private)
 resource "oci_objectstorage_bucket" "tfstate" {
-  compartment_id = oci_identity_compartment.sportsagentic.id
-  name           = var.tfstate_bucket_name
-  namespace      = data.oci_objectstorage_namespace.ns.namespace
-  access_type    = "NoPublicAccess"
-  versioning     = "Enabled"
-  auto_tiering   = "Disabled"
-  storage_tier   = "Standard"
+  compartment_id        = oci_identity_compartment.sportsagentic.id
+  name                  = var.tfstate_bucket_name
+  namespace             = data.oci_objectstorage_namespace.ns.namespace
+  access_type           = "NoPublicAccess"
+  versioning            = "Enabled"
+  auto_tiering          = "Disabled"
+  storage_tier          = "Standard"
+  object_events_enabled = true
 
   freeform_tags = {
     "Project"   = "SportsAgentic"

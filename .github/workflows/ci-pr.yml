@@ -42,6 +42,9 @@ jobs:
           tofu init -backend=false
           tofu validate
 
+      - name: Run Native OpenTofu Unit Tests
+        run: tofu test
+
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
@@ -59,10 +62,40 @@ jobs:
           severity: 'HIGH,CRITICAL'
           exit-code: '0'
 
+      - name: Run Checkov Security Scan
+        uses: bridgecrewio/checkov-action@master
+        with:
+          config_file: '.checkov.yaml'
+          soft_fail: false
+
+  terratest-unit:
+    name: Terratest Unit Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: test/go.sum
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: "1.8.8"
+
+      - name: Run Terratest Unit Checks
+        run: |
+          cd test
+          go test -v -short -run "Test.*Plan" .
+
+
   tofu-plan:
     name: OpenTofu Plan
     runs-on: ubuntu-latest
-    needs: [fmt-validate, security-scan]
+    needs: [fmt-validate, security-scan, terratest-unit]
     if: github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - name: Checkout Code

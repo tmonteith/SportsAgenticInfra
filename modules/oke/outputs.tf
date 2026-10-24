@@ -10,7 +10,7 @@ output "cluster_name" {
 
 output "cluster_endpoint" {
   description = "Public endpoint URL of the OKE cluster control plane."
-  value       = oci_containerengine_cluster.main.endpoints[0].public_endpoint
+  value       = try(oci_containerengine_cluster.main.endpoints[0].public_endpoint, "")
 }
 
 output "kubeconfig" {

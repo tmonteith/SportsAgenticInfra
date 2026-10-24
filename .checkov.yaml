@@ -1,0 +1,18 @@
+# Checkov Configuration for SportsAgentic OpenTofu Infrastructure
+framework:
+  - terraform
+
+directory:
+  - .
+
+compact: true
+quiet: true
+
+# Documented skip checks:
+# - CKV_OCI_9: OCI Object Storage encrypted with Customer Managed Key (CMK/KMS).
+#   Reason: Bootstrap state bucket uses Oracle-managed encryption keys to maintain zero-cost Always Free eligibility and avoid circular KMS dependency during bootstrap.
+# - CKV_OCI_17: Ensure VCN inbound security lists are stateless.
+#   Reason: OKE Kubernetes clusters and load balancers require stateful connection tracking for TCP streams (kubelet, Flannel overlay, NodePorts, and HTTP/S ingress).
+skip-check:
+  - CKV_OCI_9
+  - CKV_OCI_17
