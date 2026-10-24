@@ -16,7 +16,7 @@ mock_provider "oci" {
       sources = [
         {
           image_id    = "ocid1.image.oc1.iad.arm-test-image"
-          source_name = "Oracle-Linux-8.10-aarch64-2024.08.31-0-OKE-1.31.1-1"
+          source_name = "Oracle-Linux-8.10-aarch64-2024.08.31-0-OKE-1.34.0-1"
           source_type = "IMAGE"
         }
       ]

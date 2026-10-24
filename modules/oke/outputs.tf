@@ -28,3 +28,8 @@ output "model_node_pool_id" {
   description = "OCID of the model node pool."
   value       = oci_containerengine_node_pool.model.id
 }
+
+output "node_image_id" {
+  description = "Discovered worker node image OCID."
+  value       = local.node_image_id
+}

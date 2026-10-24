@@ -43,7 +43,7 @@ variable "cluster_type" {
 variable "k8s_version" {
   description = "Kubernetes version for OKE cluster and node pools."
   type        = string
-  default     = ""
+  default     = "v1.34.0"
 }
 
 variable "node_shape" {
