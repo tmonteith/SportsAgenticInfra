@@ -1,0 +1,127 @@
+name: Infra Drift Detection
+
+on:
+  schedule:
+    - cron: '0 6 * * *' # Daily at 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check-drift:
+    name: Check Infrastructure Drift
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: "1.8.8"
+
+      - name: Setup OCI Credentials
+        env:
+          OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
+          OCI_TENANCY_OCID: ${{ secrets.OCI_TENANCY_OCID }}
+          OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+          OCI_REGION: ${{ secrets.OCI_REGION }}
+          OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.oci
+          echo "$OCI_PRIVATE_KEY" > ~/.oci/oci_api_key.pem
+          chmod 600 ~/.oci/oci_api_key.pem
+
+          cat <<EOF > ~/.oci/config
+          [DEFAULT]
+          user=${OCI_USER_OCID}
+          fingerprint=${OCI_FINGERPRINT}
+          key_file=~/.oci/oci_api_key.pem
+          tenancy=${OCI_TENANCY_OCID}
+          region=${OCI_REGION}
+          EOF
+          chmod 600 ~/.oci/config
+
+      - name: OpenTofu Init
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          tofu init \
+            -backend-config="bucket=${{ secrets.TFSTATE_BUCKET }}" \
+            -backend-config="endpoint=${{ secrets.TFSTATE_S3_ENDPOINT }}" \
+            -backend-config="region=${{ secrets.OCI_REGION }}" \
+            -backend-config="access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" \
+            -backend-config="secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+
+      - name: OpenTofu Drift Plan
+        id: plan
+        continue-on-error: true
+        env:
+          TF_VAR_tenancy_ocid: ${{ secrets.OCI_TENANCY_OCID }}
+          TF_VAR_user_ocid: ${{ secrets.OCI_USER_OCID }}
+          TF_VAR_fingerprint: ${{ secrets.OCI_FINGERPRINT }}
+          TF_VAR_private_key: ${{ secrets.OCI_PRIVATE_KEY }}
+          TF_VAR_region: ${{ secrets.OCI_REGION }}
+          TF_VAR_compartment_id: ${{ secrets.OCI_COMPARTMENT_OCID }}
+        run: |
+          tofu plan -detailed-exitcode -no-color 2>&1 | tee drift_plan.txt
+          EXIT_CODE=${PIPESTATUS[0]}
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "No drift detected. Infrastructure is in sync."
+          elif [ $EXIT_CODE -eq 2 ]; then
+            echo "Drift detected between OpenTofu configuration and live OCI state."
+          else
+            echo "OpenTofu plan encountered an error."
+            exit $EXIT_CODE
+          fi
+
+      - name: Report Drift via GitHub Issue
+        if: steps.plan.outputs.exit_code == '2'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            let driftOutput = fs.readFileSync('drift_plan.txt', 'utf8');
+            if (driftOutput.length > 50000) {
+              driftOutput = driftOutput.slice(0, 50000) + '\n... [Truncated]';
+            }
+
+            const title = '⚠️ Infrastructure Drift Detected in SportsAgentic';
+            const body = `### Infrastructure Drift Detected
+
+            The scheduled nightly drift check detected changes between the OpenTofu code and live OCI infrastructure:
+
+            \`\`\`hcl
+            ${driftOutput}
+            \`\`\`
+
+            **Action Required:** Inspect the diff above and either reconcile the live resources or update OpenTofu code to match.`;
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: ['drift']
+            });
+
+            if (issues.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issues[0].number,
+                body: body
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['drift']
+              });
+            }

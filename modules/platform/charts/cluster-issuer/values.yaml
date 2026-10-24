@@ -1,0 +1,5 @@
+email: admin@sportagentic.dev
+ingressClass: nginx
+domain: sportagentic.dev
+productionServer: https://acme-v02.api.letsencrypt.org/directory
+stagingServer: https://acme-staging-v02.api.letsencrypt.org/directory

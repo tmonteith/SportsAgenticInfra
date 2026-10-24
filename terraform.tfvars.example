@@ -1,0 +1,22 @@
+# Root stack configuration example
+tenancy_ocid         = "ocid1.tenancy.oc1..aaaaaaaaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+region               = "us-ashburn-1"
+compartment_id       = "ocid1.compartment.oc1..aaaaaaaaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+compartment_name     = "sportsagentic"
+identity_domain_name = "Default"
+prefix               = "sportsagentic"
+cluster_type         = "BASIC_CLUSTER"
+k8s_version          = "v1.31.1"
+domain_name          = "sportagentic.dev"
+
+# Node pool scaling
+services_pool_size          = 1
+services_pool_ocpus         = 2
+services_pool_memory_in_gbs = 12
+
+# Model pool sits at 0 until Phase A-4
+model_pool_size             = 0
+model_pool_ocpus            = 4
+model_pool_memory_in_gbs    = 24
+
+letsencrypt_email = "admin@sportagentic.dev"

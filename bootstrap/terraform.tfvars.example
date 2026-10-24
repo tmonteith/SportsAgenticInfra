@@ -1,0 +1,6 @@
+# Example variables for bootstrap OpenTofu stack
+tenancy_ocid         = "ocid1.tenancy.oc1..aaaaaaaaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+region               = "us-ashburn-1"
+identity_domain_name = "Default"
+compartment_name     = "sportsagentic"
+tfstate_bucket_name  = "sportsagentic-tfstate"
