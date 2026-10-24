@@ -5,39 +5,46 @@ data "oci_identity_availability_domains" "ads" {
 
 # 2. Discover OKE-ready node images
 data "oci_containerengine_node_pool_option" "oke" {
-  node_pool_option_id   = "all"
-  compartment_id        = var.compartment_id
-  node_pool_k8s_version = startswith(var.k8s_version, "v") ? var.k8s_version : "v${var.k8s_version}"
+  node_pool_option_id = "all"
+  compartment_id      = var.compartment_id
 }
 
 locals {
-  k8s_version_clean       = replace(var.k8s_version, "v", "")
-  k8s_version_major_minor = join(".", slice(split(".", local.k8s_version_clean), 0, 2))
+  k8s_version_clean = replace(var.k8s_version, "v", "")
+  k8s_split         = split(".", local.k8s_version_clean)
+  k8s_major_minor   = length(local.k8s_split) >= 2 ? "${local.k8s_split[0]}.${local.k8s_split[1]}" : local.k8s_version_clean
 
+  # 1. Exact match for aarch64 and full k8s version (e.g. 1.34.0)
   arm_sources_matching_version = [
-    for source in data.oci_containerengine_node_pool_option.oke.sources :
+    for source in try(data.oci_containerengine_node_pool_option.oke.sources, []) :
     source.image_id
     if length(regexall(".*aarch64.*", lower(source.source_name))) > 0 &&
     length(regexall(".*${local.k8s_version_clean}.*", source.source_name)) > 0
   ]
 
+  # 2. Match for aarch64 and major.minor (e.g. 1.34)
   arm_sources_matching_minor = [
-    for source in data.oci_containerengine_node_pool_option.oke.sources :
+    for source in try(data.oci_containerengine_node_pool_option.oke.sources, []) :
     source.image_id
     if length(regexall(".*aarch64.*", lower(source.source_name))) > 0 &&
-    length(regexall(".*${local.k8s_version_major_minor}.*", source.source_name)) > 0
+    length(regexall(".*${local.k8s_major_minor}.*", source.source_name)) > 0
   ]
 
+  # 3. All aarch64 images
   arm_sources = [
-    for source in data.oci_containerengine_node_pool_option.oke.sources :
+    for source in try(data.oci_containerengine_node_pool_option.oke.sources, []) :
     source.image_id
     if length(regexall(".*aarch64.*", lower(source.source_name))) > 0
   ]
 
-  node_image_id = var.node_image_id != "" ? var.node_image_id : (
-    length(local.arm_sources_matching_version) > 0 ? local.arm_sources_matching_version[0] : (
-      length(local.arm_sources_matching_minor) > 0 ? local.arm_sources_matching_minor[0] : (
-        length(local.arm_sources) > 0 ? local.arm_sources[0] : data.oci_containerengine_node_pool_option.oke.sources[0].image_id
+  # Safely resolve image without index out of bounds
+  node_image_id = var.node_image_id != "" ? var.node_image_id : try(
+    local.arm_sources_matching_version[0],
+    try(
+      local.arm_sources_matching_minor[0],
+      try(
+        local.arm_sources[0],
+        try(data.oci_containerengine_node_pool_option.oke.sources[0].image_id, "")
       )
     )
   )

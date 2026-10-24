@@ -23,6 +23,11 @@ output "oke_cluster_name" {
   value       = module.oke.cluster_name
 }
 
+output "available_kubernetes_versions" {
+  description = "Available Kubernetes versions supported by OKE in this region."
+  value       = module.oke.available_kubernetes_versions
+}
+
 output "oke_cluster_endpoint" {
   description = "Public API endpoint URL of the OKE cluster."
   value       = module.oke.cluster_endpoint
