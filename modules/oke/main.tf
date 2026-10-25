@@ -4,24 +4,17 @@ data "oci_identity_availability_domains" "ads" {
 }
 
 locals {
-  is_arm = length(regexall(".*A1.*", var.node_shape)) > 0
+  is_arm       = length(regexall(".*A1.*", var.node_shape)) > 0
+  os_arch      = local.is_arm ? "AARCH64" : "X86_64"
+  arch_pattern = local.is_arm ? ".*aarch64.*" : ".*(x86_64|amd64).*"
 }
 
 # 2. Discover OKE-ready node images (Architecture-specific & version-specific)
-data "oci_containerengine_node_pool_option" "oke_arm" {
-  count                 = local.is_arm ? 1 : 0
+data "oci_containerengine_node_pool_option" "oke" {
   node_pool_option_id   = "all"
   compartment_id        = var.compartment_id
   node_pool_k8s_version = startswith(var.k8s_version, "v") ? var.k8s_version : "v${var.k8s_version}"
-  node_pool_os_arch     = "ARM"
-}
-
-data "oci_containerengine_node_pool_option" "oke_x86" {
-  count                 = local.is_arm ? 0 : 1
-  node_pool_option_id   = "all"
-  compartment_id        = var.compartment_id
-  node_pool_k8s_version = startswith(var.k8s_version, "v") ? var.k8s_version : "v${var.k8s_version}"
-  node_pool_os_arch     = "X86_64"
+  node_pool_os_arch     = local.os_arch
 }
 
 data "oci_containerengine_node_pool_option" "oke_all" {
@@ -30,13 +23,10 @@ data "oci_containerengine_node_pool_option" "oke_all" {
 }
 
 locals {
-  arch_pattern      = local.is_arm ? ".*aarch64.*" : ".*(x86_64|amd64).*"
   k8s_version_clean = replace(var.k8s_version, "v", "")
 
-  active_sources = local.is_arm ? try(data.oci_containerengine_node_pool_option.oke_arm[0].sources, []) : try(data.oci_containerengine_node_pool_option.oke_x86[0].sources, [])
-
   combined_sources = concat(
-    local.active_sources,
+    try(data.oci_containerengine_node_pool_option.oke.sources, []),
     try(data.oci_containerengine_node_pool_option.oke_all.sources, [])
   )
 
