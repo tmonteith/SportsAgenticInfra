@@ -36,6 +36,8 @@ module "oke" {
   nodes_subnet_id             = module.network.nodes_subnet_id
   cluster_type                = var.cluster_type
   k8s_version                 = var.k8s_version
+  node_shape                  = var.node_shape
+  node_fault_domains          = var.node_fault_domains
   services_pool_size          = var.services_pool_size
   services_pool_ocpus         = var.services_pool_ocpus
   services_pool_memory_in_gbs = var.services_pool_memory_in_gbs

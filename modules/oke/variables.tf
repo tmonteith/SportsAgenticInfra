@@ -52,6 +52,12 @@ variable "node_shape" {
   default     = "VM.Standard.A1.Flex"
 }
 
+variable "node_fault_domains" {
+  description = "Optional list of fault domains for worker node placement (e.g. ['FAULT-DOMAIN-1', 'FAULT-DOMAIN-2', 'FAULT-DOMAIN-3'])."
+  type        = list(string)
+  default     = null
+}
+
 variable "services_pool_size" {
   description = "Number of worker nodes in the services pool."
   type        = number

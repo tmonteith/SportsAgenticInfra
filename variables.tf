@@ -75,6 +75,18 @@ variable "k8s_version" {
   default     = "v1.34.0"
 }
 
+variable "node_shape" {
+  description = "Compute shape for OKE worker nodes."
+  type        = string
+  default     = "VM.Standard.A1.Flex"
+}
+
+variable "node_fault_domains" {
+  description = "Optional list of fault domains for worker node placement (e.g. ['FAULT-DOMAIN-1', 'FAULT-DOMAIN-2', 'FAULT-DOMAIN-3'])."
+  type        = list(string)
+  default     = null
+}
+
 variable "domain_name" {
   description = "Authoritative domain name for SportsAgentic."
   type        = string

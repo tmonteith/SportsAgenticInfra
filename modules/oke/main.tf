@@ -10,40 +10,43 @@ data "oci_containerengine_node_pool_option" "oke" {
 }
 
 locals {
+  is_arm       = length(regexall(".*A1.*", var.node_shape)) > 0
+  arch_pattern = local.is_arm ? ".*aarch64.*" : ".*(x86_64|amd64).*"
+
   k8s_version_clean = replace(var.k8s_version, "v", "")
   k8s_split         = split(".", local.k8s_version_clean)
   k8s_major_minor   = length(local.k8s_split) >= 2 ? "${local.k8s_split[0]}.${local.k8s_split[1]}" : local.k8s_version_clean
 
-  # 1. Exact match for aarch64 and full k8s version (e.g. 1.34.0)
-  arm_sources_matching_version = [
+  # 1. Exact match for target architecture and full k8s version (e.g. 1.34.0)
+  sources_matching_version = [
     for source in try(data.oci_containerengine_node_pool_option.oke.sources, []) :
     source.image_id
-    if length(regexall(".*aarch64.*", lower(source.source_name))) > 0 &&
+    if length(regexall(local.arch_pattern, lower(source.source_name))) > 0 &&
     length(regexall(".*${local.k8s_version_clean}.*", source.source_name)) > 0
   ]
 
-  # 2. Match for aarch64 and major.minor (e.g. 1.34)
-  arm_sources_matching_minor = [
+  # 2. Match for target architecture and major.minor (e.g. 1.34)
+  sources_matching_minor = [
     for source in try(data.oci_containerengine_node_pool_option.oke.sources, []) :
     source.image_id
-    if length(regexall(".*aarch64.*", lower(source.source_name))) > 0 &&
+    if length(regexall(local.arch_pattern, lower(source.source_name))) > 0 &&
     length(regexall(".*${local.k8s_major_minor}.*", source.source_name)) > 0
   ]
 
-  # 3. All aarch64 images
-  arm_sources = [
+  # 3. All images matching target architecture
+  sources_matching_arch = [
     for source in try(data.oci_containerengine_node_pool_option.oke.sources, []) :
     source.image_id
-    if length(regexall(".*aarch64.*", lower(source.source_name))) > 0
+    if length(regexall(local.arch_pattern, lower(source.source_name))) > 0
   ]
 
   # Safely resolve image without index out of bounds
   node_image_id = var.node_image_id != "" ? var.node_image_id : try(
-    local.arm_sources_matching_version[0],
+    local.sources_matching_version[0],
     try(
-      local.arm_sources_matching_minor[0],
+      local.sources_matching_minor[0],
       try(
-        local.arm_sources[0],
+        local.sources_matching_arch[0],
         try(data.oci_containerengine_node_pool_option.oke.sources[0].image_id, "")
       )
     )
@@ -110,9 +113,13 @@ resource "oci_containerengine_node_pool" "services" {
   }
 
   node_config_details {
-    placement_configs {
-      availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
-      subnet_id           = var.nodes_subnet_id
+    dynamic "placement_configs" {
+      for_each = data.oci_identity_availability_domains.ads.availability_domains
+      content {
+        availability_domain = placement_configs.value.name
+        subnet_id           = var.nodes_subnet_id
+        fault_domains       = var.node_fault_domains
+      }
     }
     size = var.services_pool_size
 
@@ -160,9 +167,13 @@ resource "oci_containerengine_node_pool" "model" {
   }
 
   node_config_details {
-    placement_configs {
-      availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
-      subnet_id           = var.nodes_subnet_id
+    dynamic "placement_configs" {
+      for_each = data.oci_identity_availability_domains.ads.availability_domains
+      content {
+        availability_domain = placement_configs.value.name
+        subnet_id           = var.nodes_subnet_id
+        fault_domains       = var.node_fault_domains
+      }
     }
     size = var.model_pool_size
 
