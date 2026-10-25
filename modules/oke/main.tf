@@ -5,6 +5,12 @@ data "oci_identity_availability_domains" "ads" {
 
 # 2. Discover OKE-ready node images
 data "oci_containerengine_node_pool_option" "oke" {
+  node_pool_option_id   = "all"
+  compartment_id        = var.compartment_id
+  node_pool_k8s_version = startswith(var.k8s_version, "v") ? var.k8s_version : "v${var.k8s_version}"
+}
+
+data "oci_containerengine_node_pool_option" "oke_all" {
   node_pool_option_id = "all"
   compartment_id      = var.compartment_id
 }
@@ -14,41 +20,33 @@ locals {
   arch_pattern = local.is_arm ? ".*aarch64.*" : ".*(x86_64|amd64).*"
 
   k8s_version_clean = replace(var.k8s_version, "v", "")
-  k8s_split         = split(".", local.k8s_version_clean)
-  k8s_major_minor   = length(local.k8s_split) >= 2 ? "${local.k8s_split[0]}.${local.k8s_split[1]}" : local.k8s_version_clean
 
-  # 1. Exact match for target architecture and full k8s version (e.g. 1.34.0)
-  sources_matching_version = [
-    for source in try(data.oci_containerengine_node_pool_option.oke.sources, []) :
+  combined_sources = concat(
+    try(data.oci_containerengine_node_pool_option.oke.sources, []),
+    try(data.oci_containerengine_node_pool_option.oke_all.sources, [])
+  )
+
+  # 1. Exact match for target architecture AND requested k8s version (e.g. 1.34.0)
+  sources_matching_both = [
+    for source in local.combined_sources :
     source.image_id
     if length(regexall(local.arch_pattern, lower(source.source_name))) > 0 &&
     length(regexall(".*${local.k8s_version_clean}.*", source.source_name)) > 0
   ]
 
-  # 2. Match for target architecture and major.minor (e.g. 1.34)
-  sources_matching_minor = [
-    for source in try(data.oci_containerengine_node_pool_option.oke.sources, []) :
-    source.image_id
-    if length(regexall(local.arch_pattern, lower(source.source_name))) > 0 &&
-    length(regexall(".*${local.k8s_major_minor}.*", source.source_name)) > 0
-  ]
-
-  # 3. All images matching target architecture
+  # 2. Match for target architecture only
   sources_matching_arch = [
-    for source in try(data.oci_containerengine_node_pool_option.oke.sources, []) :
+    for source in local.combined_sources :
     source.image_id
     if length(regexall(local.arch_pattern, lower(source.source_name))) > 0
   ]
 
-  # Safely resolve image without index out of bounds
+  # Safely resolve image without index out of bounds, preferring exact version match
   node_image_id = var.node_image_id != "" ? var.node_image_id : try(
-    local.sources_matching_version[0],
+    local.sources_matching_both[0],
     try(
-      local.sources_matching_minor[0],
-      try(
-        local.sources_matching_arch[0],
-        try(data.oci_containerengine_node_pool_option.oke.sources[0].image_id, "")
-      )
+      local.sources_matching_arch[0],
+      try(local.combined_sources[0].image_id, "")
     )
   )
 }
