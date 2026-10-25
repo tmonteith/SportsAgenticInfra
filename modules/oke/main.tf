@@ -3,11 +3,25 @@ data "oci_identity_availability_domains" "ads" {
   compartment_id = var.tenancy_ocid
 }
 
-# 2. Discover OKE-ready node images
-data "oci_containerengine_node_pool_option" "oke" {
+locals {
+  is_arm = length(regexall(".*A1.*", var.node_shape)) > 0
+}
+
+# 2. Discover OKE-ready node images (Architecture-specific & version-specific)
+data "oci_containerengine_node_pool_option" "oke_arm" {
+  count                 = local.is_arm ? 1 : 0
   node_pool_option_id   = "all"
   compartment_id        = var.compartment_id
   node_pool_k8s_version = startswith(var.k8s_version, "v") ? var.k8s_version : "v${var.k8s_version}"
+  node_pool_os_arch     = "ARM"
+}
+
+data "oci_containerengine_node_pool_option" "oke_x86" {
+  count                 = local.is_arm ? 0 : 1
+  node_pool_option_id   = "all"
+  compartment_id        = var.compartment_id
+  node_pool_k8s_version = startswith(var.k8s_version, "v") ? var.k8s_version : "v${var.k8s_version}"
+  node_pool_os_arch     = "X86_64"
 }
 
 data "oci_containerengine_node_pool_option" "oke_all" {
@@ -16,13 +30,13 @@ data "oci_containerengine_node_pool_option" "oke_all" {
 }
 
 locals {
-  is_arm       = length(regexall(".*A1.*", var.node_shape)) > 0
-  arch_pattern = local.is_arm ? ".*aarch64.*" : ".*(x86_64|amd64).*"
-
+  arch_pattern      = local.is_arm ? ".*aarch64.*" : ".*(x86_64|amd64).*"
   k8s_version_clean = replace(var.k8s_version, "v", "")
 
+  active_sources = local.is_arm ? try(data.oci_containerengine_node_pool_option.oke_arm[0].sources, []) : try(data.oci_containerengine_node_pool_option.oke_x86[0].sources, [])
+
   combined_sources = concat(
-    try(data.oci_containerengine_node_pool_option.oke.sources, []),
+    local.active_sources,
     try(data.oci_containerengine_node_pool_option.oke_all.sources, [])
   )
 
@@ -41,7 +55,7 @@ locals {
     if length(regexall(local.arch_pattern, lower(source.source_name))) > 0
   ]
 
-  # Safely resolve image without index out of bounds, preferring exact version match
+  # Safely resolve image without index out of bounds
   node_image_id = var.node_image_id != "" ? var.node_image_id : try(
     local.sources_matching_both[0],
     try(

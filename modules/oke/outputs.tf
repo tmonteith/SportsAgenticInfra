@@ -36,5 +36,5 @@ output "node_image_id" {
 
 output "available_kubernetes_versions" {
   description = "Available Kubernetes versions for OKE in this region."
-  value       = data.oci_containerengine_node_pool_option.oke.kubernetes_versions
+  value       = data.oci_containerengine_node_pool_option.oke_all.kubernetes_versions
 }
