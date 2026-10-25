@@ -13,15 +13,10 @@ domain_name          = "sportagentic.dev"
 # Optional: target specific fault domains if one is out of host capacity
 # node_fault_domains = ["FAULT-DOMAIN-1", "FAULT-DOMAIN-2", "FAULT-DOMAIN-3"]
 
-# Node pool scaling
-services_pool_size          = 1
-services_pool_ocpus         = 2
-services_pool_memory_in_gbs = 12
-
-# Model pool sits at 0 until Phase A-4
-model_pool_size             = 0
-model_pool_ocpus            = 4
-model_pool_memory_in_gbs    = 24
+# Single node pool configuration (Always Free: 1 node, 4 OCPUs, 24 GB RAM)
+model_pool_size          = 1
+model_pool_ocpus         = 4
+model_pool_memory_in_gbs = 24
 
 letsencrypt_email = "admin@sportagentic.dev"
-email                = "admin@sportagentic.dev"
+email             = "admin@sportagentic.dev"

@@ -27,24 +27,21 @@ module "iam" {
 module "oke" {
   source = "./modules/oke"
 
-  tenancy_ocid                = var.tenancy_ocid
-  compartment_id              = var.compartment_id
-  prefix                      = var.prefix
-  vcn_id                      = module.network.vcn_id
-  k8s_api_subnet_id           = module.network.k8s_api_subnet_id
-  lb_subnet_id                = module.network.lb_subnet_id
-  nodes_subnet_id             = module.network.nodes_subnet_id
-  cluster_type                = var.cluster_type
-  k8s_version                 = var.k8s_version
-  node_shape                  = var.node_shape
-  node_fault_domains          = var.node_fault_domains
-  services_pool_size          = var.services_pool_size
-  services_pool_ocpus         = var.services_pool_ocpus
-  services_pool_memory_in_gbs = var.services_pool_memory_in_gbs
-  model_pool_size             = var.model_pool_size
-  model_pool_ocpus            = var.model_pool_ocpus
-  model_pool_memory_in_gbs    = var.model_pool_memory_in_gbs
-  ssh_public_key              = var.ssh_public_key
+  tenancy_ocid             = var.tenancy_ocid
+  compartment_id           = var.compartment_id
+  prefix                   = var.prefix
+  vcn_id                   = module.network.vcn_id
+  k8s_api_subnet_id        = module.network.k8s_api_subnet_id
+  lb_subnet_id             = module.network.lb_subnet_id
+  nodes_subnet_id          = module.network.nodes_subnet_id
+  cluster_type             = var.cluster_type
+  k8s_version              = var.k8s_version
+  node_shape               = var.node_shape
+  node_fault_domains       = var.node_fault_domains
+  model_pool_size          = var.model_pool_size
+  model_pool_ocpus         = var.model_pool_ocpus
+  model_pool_memory_in_gbs = var.model_pool_memory_in_gbs
+  ssh_public_key           = var.ssh_public_key
 
   depends_on = [module.iam]
 }

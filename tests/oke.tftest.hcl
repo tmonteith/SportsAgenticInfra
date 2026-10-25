@@ -57,22 +57,19 @@ run "test_oke_module" {
   }
 
   variables {
-    tenancy_ocid                = "ocid1.tenancy.oc1..test"
-    compartment_id              = "ocid1.compartment.oc1..test"
-    prefix                      = "sportsagentic"
-    vcn_id                      = "ocid1.vcn.oc1..test"
-    k8s_api_subnet_id           = "ocid1.subnet.oc1..api"
-    lb_subnet_id                = "ocid1.subnet.oc1..lb"
-    nodes_subnet_id             = "ocid1.subnet.oc1..nodes"
-    cluster_type                = "BASIC_CLUSTER"
-    k8s_version                 = "v1.34.10"
-    node_shape                  = "VM.Standard.A1.Flex"
-    services_pool_size          = 1
-    services_pool_ocpus         = 2
-    services_pool_memory_in_gbs = 12
-    model_pool_size             = 0
-    model_pool_ocpus            = 4
-    model_pool_memory_in_gbs    = 24
+    tenancy_ocid             = "ocid1.tenancy.oc1..test"
+    compartment_id           = "ocid1.compartment.oc1..test"
+    prefix                   = "sportsagentic"
+    vcn_id                   = "ocid1.vcn.oc1..test"
+    k8s_api_subnet_id        = "ocid1.subnet.oc1..api"
+    lb_subnet_id             = "ocid1.subnet.oc1..lb"
+    nodes_subnet_id          = "ocid1.subnet.oc1..nodes"
+    cluster_type             = "BASIC_CLUSTER"
+    k8s_version              = "v1.34.10"
+    node_shape               = "VM.Standard.A1.Flex"
+    model_pool_size          = 1
+    model_pool_ocpus         = 4
+    model_pool_memory_in_gbs = 24
   }
 
   # Cluster control plane assertions
@@ -91,28 +88,7 @@ run "test_oke_module" {
     error_message = "Cluster pod networking must use FLANNEL_OVERLAY"
   }
 
-  # Services Node Pool assertions
-  assert {
-    condition     = oci_containerengine_node_pool.services.node_shape == "VM.Standard.A1.Flex"
-    error_message = "Services node pool must use ARM VM.Standard.A1.Flex"
-  }
-
-  assert {
-    condition     = oci_containerengine_node_pool.services.node_shape_config[0].ocpus == 2
-    error_message = "Services node pool must be configured with 2 OCPUs"
-  }
-
-  assert {
-    condition     = oci_containerengine_node_pool.services.node_shape_config[0].memory_in_gbs == 12
-    error_message = "Services node pool must be configured with 12 GB RAM"
-  }
-
-  assert {
-    condition     = oci_containerengine_node_pool.services.node_config_details[0].size == 1
-    error_message = "Services node pool size must default to 1"
-  }
-
-  # Model Node Pool assertions
+  # Single Node Pool assertions
   assert {
     condition     = oci_containerengine_node_pool.model.node_shape == "VM.Standard.A1.Flex"
     error_message = "Model node pool must use ARM VM.Standard.A1.Flex"
@@ -129,7 +105,7 @@ run "test_oke_module" {
   }
 
   assert {
-    condition     = oci_containerengine_node_pool.model.node_config_details[0].size == 0
-    error_message = "Model node pool size must sit at 0 until Phase A-4"
+    condition     = oci_containerengine_node_pool.model.node_config_details[0].size == 1
+    error_message = "Single node pool size must be 1"
   }
 }

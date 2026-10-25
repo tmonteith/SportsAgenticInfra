@@ -19,11 +19,6 @@ output "kubeconfig" {
   sensitive   = true
 }
 
-output "services_node_pool_id" {
-  description = "OCID of the services node pool."
-  value       = oci_containerengine_node_pool.services.id
-}
-
 output "model_node_pool_id" {
   description = "OCID of the model node pool."
   value       = oci_containerengine_node_pool.model.id

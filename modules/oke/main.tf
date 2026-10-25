@@ -96,61 +96,7 @@ resource "oci_containerengine_cluster" "main" {
   }
 }
 
-# 4. Services Node Pool (Small, Always-On for MCP Server, Ingress, cert-manager)
-resource "oci_containerengine_node_pool" "services" {
-  cluster_id         = oci_containerengine_cluster.main.id
-  compartment_id     = var.compartment_id
-  kubernetes_version = var.k8s_version
-  name               = "services-pool"
-  node_shape         = var.node_shape
-
-  node_shape_config {
-    ocpus         = var.services_pool_ocpus
-    memory_in_gbs = var.services_pool_memory_in_gbs
-  }
-
-  node_source_details {
-    image_id    = local.node_image_id
-    source_type = "IMAGE"
-  }
-
-  node_config_details {
-    dynamic "placement_configs" {
-      for_each = data.oci_identity_availability_domains.ads.availability_domains
-      content {
-        availability_domain = placement_configs.value.name
-        subnet_id           = var.nodes_subnet_id
-        fault_domains       = var.node_fault_domains
-      }
-    }
-    size = var.services_pool_size
-
-    freeform_tags = {
-      "node_pool" = "services"
-      "Project"   = "SportsAgentic"
-      "ManagedBy" = "OpenTofu"
-    }
-  }
-
-  initial_node_labels {
-    key   = "workload-role"
-    value = "services"
-  }
-
-  initial_node_labels {
-    key   = "pool"
-    value = "services"
-  }
-
-  ssh_public_key = var.ssh_public_key != "" ? var.ssh_public_key : null
-
-  freeform_tags = {
-    "Project"   = "SportsAgentic"
-    "ManagedBy" = "OpenTofu"
-  }
-}
-
-# 5. Model Node Pool (Larger-Memory, Tainted, Sits at Size 0 until Phase A-4)
+# 4. Single Worker Node Pool (Always Free ARM VM.Standard.A1.Flex: 1 node, 4 OCPUs, 24 GB RAM)
 resource "oci_containerengine_node_pool" "model" {
   cluster_id         = oci_containerengine_cluster.main.id
   compartment_id     = var.compartment_id
@@ -196,7 +142,6 @@ resource "oci_containerengine_node_pool" "model" {
     value = "model"
   }
 
-  # Apply taint on startup script so no general pods land on the model pool
   node_metadata = {
     user_data = base64encode(<<-EOT
       #!/bin/bash
@@ -212,9 +157,13 @@ resource "oci_containerengine_node_pool" "model" {
     "Project"   = "SportsAgentic"
     "ManagedBy" = "OpenTofu"
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
-# 6. Cluster Kubeconfig Data Source
+# 5. Cluster Kubeconfig Data Source
 data "oci_containerengine_cluster_kube_config" "kubeconfig" {
   cluster_id = oci_containerengine_cluster.main.id
   endpoint   = "PUBLIC_ENDPOINT"

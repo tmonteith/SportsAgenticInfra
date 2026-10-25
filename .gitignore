@@ -48,6 +48,7 @@ terraform.rc
 *.key
 kubeconfig*
 tfplan*
+*.tfplan
 .env
 .env.*
 !.env.example
