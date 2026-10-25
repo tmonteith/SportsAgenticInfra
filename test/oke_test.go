@@ -25,7 +25,7 @@ func TestOkeClusterPlan(t *testing.T) {
 			"lb_subnet_id":      "ocid1.subnet.oc1..lb",
 			"nodes_subnet_id":   "ocid1.subnet.oc1..nodes",
 			"cluster_type":      "BASIC_CLUSTER",
-			"k8s_version":       "v1.34.0",
+			"k8s_version":       "v1.34.10",
 		},
 		NoColor: true,
 	}

@@ -65,7 +65,7 @@ run "test_oke_module" {
     lb_subnet_id                = "ocid1.subnet.oc1..lb"
     nodes_subnet_id             = "ocid1.subnet.oc1..nodes"
     cluster_type                = "BASIC_CLUSTER"
-    k8s_version                 = "v1.34.0"
+    k8s_version                 = "v1.34.10"
     node_shape                  = "VM.Standard.A1.Flex"
     services_pool_size          = 1
     services_pool_ocpus         = 2
@@ -82,8 +82,8 @@ run "test_oke_module" {
   }
 
   assert {
-    condition     = oci_containerengine_cluster.main.kubernetes_version == "v1.34.0"
-    error_message = "Kubernetes version must be v1.34.0"
+    condition     = oci_containerengine_cluster.main.kubernetes_version == "v1.34.10"
+    error_message = "Kubernetes version must be v1.34.10"
   }
 
   assert {
