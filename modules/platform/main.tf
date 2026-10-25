@@ -32,7 +32,7 @@ resource "oci_artifacts_container_repository" "agent_model" {
 resource "oci_nosql_table" "cfb" {
   compartment_id = var.compartment_id
   name           = var.nosql_table_name
-  ddl_statement  = "CREATE TABLE IF NOT EXISTS ${var.nosql_table_name} (id STRING, entity_type STRING, season INTEGER, week INTEGER, data JSON, created_at TIMESTAMP, updated_at TIMESTAMP, PRIMARY KEY (SHARD(entity_type), id))"
+  ddl_statement  = "CREATE TABLE IF NOT EXISTS ${var.nosql_table_name} (id STRING, entity_type STRING, season INTEGER, week INTEGER, data JSON, created_at TIMESTAMP(3), updated_at TIMESTAMP(3), PRIMARY KEY (SHARD(entity_type), id))"
 
   table_limits {
     max_read_units     = var.nosql_max_read_units

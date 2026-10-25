@@ -22,6 +22,11 @@ jobs:
         with:
           tofu_version: "1.8.8"
 
+      - name: Install OCI CLI
+        run: |
+          bash -c "$(curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh)" -- --accept-all-defaults
+          echo "$HOME/bin" >> $GITHUB_PATH
+
       - name: Setup OCI Credentials
         env:
           OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}

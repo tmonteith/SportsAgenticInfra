@@ -134,6 +134,12 @@ jobs:
           EOF
           chmod 600 ~/.oci/config
 
+      - name: Install OCI CLI
+        if: env.configured == 'true'
+        run: |
+          bash -c "$(curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh)" -- --accept-all-defaults
+          echo "$HOME/bin" >> $GITHUB_PATH
+
       - name: OpenTofu Init with Remote State
         if: env.configured == 'true'
         env:

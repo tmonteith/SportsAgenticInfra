@@ -13,6 +13,7 @@ The `bootstrap/` OpenTofu stack creates the foundational OCI resources that cann
 1. An OCI account with tenancy administrator permissions (or permissions to create compartments and IAM groups).
 2. [OpenTofu CLI](https://opentofu.org/) (`tofu`) installed locally.
 3. [GitHub CLI](https://cli.github.com/) (`gh`) authenticated with repository permissions (`gh auth login`).
+4. [OCI CLI](https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/cliinstall.htm) (`oci`) installed locally and available in `$PATH` (required by the Kubernetes and Helm providers to generate OKE authentication tokens during plan/apply).
 
 ---
 
