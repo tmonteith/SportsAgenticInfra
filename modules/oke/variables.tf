@@ -57,8 +57,8 @@ variable "node_shape" {
   default     = "VM.Standard.A1.Flex"
 
   validation {
-    condition     = var.node_shape == "VM.Standard.A1.Flex"
-    error_message = "Node shape must be VM.Standard.A1.Flex for Always Free ARM compute."
+    condition     = contains(["VM.Standard.A1.Flex", "VM.Standard.A2.Flex", "VM.Standard.E5.Flex", "VM.Standard.E4.Flex", "VM.Standard3.Flex"], var.node_shape)
+    error_message = "Node shape must be a supported flexible compute shape (e.g. VM.Standard.A1.Flex, VM.Standard.E5.Flex)."
   }
 }
 
@@ -80,24 +80,24 @@ variable "model_pool_size" {
 }
 
 variable "model_pool_ocpus" {
-  description = "OCPUs per node in the single node pool (max 4 on Always Free tier)."
+  description = "OCPUs per node in the single node pool."
   type        = number
   default     = 4
 
   validation {
-    condition     = var.model_pool_ocpus >= 1 && var.model_pool_ocpus <= 4
-    error_message = "OCPUs must be between 1 and 4 to stay within OCI Always Free Ampere A1 limits (max 4 OCPUs)."
+    condition     = var.model_pool_ocpus >= 1 && var.model_pool_ocpus <= 64
+    error_message = "OCPUs must be between 1 and 64."
   }
 }
 
 variable "model_pool_memory_in_gbs" {
-  description = "Memory in GB per node in the single node pool (max 24 GB on Always Free tier)."
+  description = "Memory in GB per node in the single node pool."
   type        = number
   default     = 24
 
   validation {
-    condition     = var.model_pool_memory_in_gbs >= 1 && var.model_pool_memory_in_gbs <= 24
-    error_message = "Memory must be between 1 and 24 GB to stay within OCI Always Free Ampere A1 limits (max 24 GB)."
+    condition     = var.model_pool_memory_in_gbs >= 1 && var.model_pool_memory_in_gbs <= 512
+    error_message = "Memory must be between 1 and 512 GB."
   }
 }
 

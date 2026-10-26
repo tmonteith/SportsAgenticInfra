@@ -4,9 +4,8 @@ data "oci_identity_availability_domains" "ads" {
 }
 
 locals {
-  is_arm       = length(regexall(".*A1.*", var.node_shape)) > 0
-  os_arch      = local.is_arm ? "AARCH64" : "X86_64"
-  arch_pattern = local.is_arm ? ".*aarch64.*" : ".*(x86_64|amd64).*"
+  is_arm  = length(regexall(".*A[12].*", var.node_shape)) > 0
+  os_arch = local.is_arm ? "AARCH64" : "X86_64"
 }
 
 # 2. Discover OKE-ready node images (Architecture-specific & version-specific)
@@ -30,19 +29,29 @@ locals {
     try(data.oci_containerengine_node_pool_option.oke_all.sources, [])
   )
 
-  # 1. Exact match for target architecture AND requested k8s version (e.g. 1.34.0)
-  sources_matching_both = [
+  # Filter sources to eliminate GPU images and strictly match target architecture.
+  # Standard OCI x86 images omit the architecture suffix, while ARM images include 'aarch64'.
+  valid_arch_sources = [
     for source in local.combined_sources :
-    source.image_id
-    if length(regexall(local.arch_pattern, lower(source.source_name))) > 0 &&
-    length(regexall(".*${local.k8s_version_clean}.*", source.source_name)) > 0
+    source
+    if length(regexall(".*gpu.*", lower(source.source_name))) == 0 && (
+      local.is_arm ?
+      length(regexall(".*aarch64.*", lower(source.source_name))) > 0 :
+      length(regexall(".*aarch64.*", lower(source.source_name))) == 0
+    )
   ]
 
-  # 2. Match for target architecture only
-  sources_matching_arch = [
-    for source in local.combined_sources :
+  # 1. Exact match for target architecture AND requested k8s version (e.g. 1.34.10)
+  sources_matching_both = [
+    for source in local.valid_arch_sources :
     source.image_id
-    if length(regexall(local.arch_pattern, lower(source.source_name))) > 0
+    if length(regexall(".*${local.k8s_version_clean}.*", source.source_name)) > 0
+  ]
+
+  # 2. Match for target architecture (fallback if exact k8s patch version differs)
+  sources_matching_arch = [
+    for source in local.valid_arch_sources :
+    source.image_id
   ]
 
   # Safely resolve image without index out of bounds

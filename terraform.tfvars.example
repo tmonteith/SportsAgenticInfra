@@ -7,8 +7,11 @@ identity_domain_name = "Default"
 prefix               = "sportsagentic"
 cluster_type         = "BASIC_CLUSTER"
 k8s_version          = "v1.34.10"
-node_shape           = "VM.Standard.A1.Flex" # Change to "VM.Standard.E4.Flex" if region is out of Ampere ARM capacity
+node_shape           = "VM.Standard.A1.Flex" # Or "VM.Standard.E5.Flex" / "VM.Standard.E4.Flex" if region is out of Ampere ARM capacity
 domain_name          = "sportagentic.dev"
+
+# Optional: override node image OCID if dynamic discovery is not desired
+# node_image_id      = ""
 
 # Optional: target specific fault domains if one is out of host capacity
 # node_fault_domains = ["FAULT-DOMAIN-1", "FAULT-DOMAIN-2", "FAULT-DOMAIN-3"]

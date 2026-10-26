@@ -15,8 +15,18 @@ mock_provider "oci" {
     defaults = {
       sources = [
         {
+          image_id    = "ocid1.image.oc1.iad.gpu-test-image"
+          source_name = "Oracle-Linux-9.8-Gen2-GPU-2024.08.31-0-OKE-1.34.10-1"
+          source_type = "IMAGE"
+        },
+        {
           image_id    = "ocid1.image.oc1.iad.arm-test-image"
-          source_name = "Oracle-Linux-8.10-aarch64-2024.08.31-0-OKE-1.34.0-1"
+          source_name = "Oracle-Linux-8.10-aarch64-2024.08.31-0-OKE-1.34.10-1"
+          source_type = "IMAGE"
+        },
+        {
+          image_id    = "ocid1.image.oc1.iad.amd-test-image"
+          source_name = "Oracle-Linux-9.8-2024.08.31-0-OKE-1.34.10-1"
           source_type = "IMAGE"
         }
       ]
@@ -107,5 +117,54 @@ run "test_oke_module" {
   assert {
     condition     = oci_containerengine_node_pool.model.node_config_details[0].size == 1
     error_message = "Single node pool size must be 1"
+  }
+
+  assert {
+    condition     = oci_containerengine_node_pool.model.node_source_details[0].image_id == "ocid1.image.oc1.iad.arm-test-image"
+    error_message = "Model node pool must resolve to ARM image"
+  }
+}
+
+run "test_oke_module_amd" {
+  command = plan
+
+  module {
+    source = "./modules/oke"
+  }
+
+  variables {
+    tenancy_ocid             = "ocid1.tenancy.oc1..test"
+    compartment_id           = "ocid1.compartment.oc1..test"
+    prefix                   = "sportsagentic"
+    vcn_id                   = "ocid1.vcn.oc1..test"
+    k8s_api_subnet_id        = "ocid1.subnet.oc1..api"
+    lb_subnet_id             = "ocid1.subnet.oc1..lb"
+    nodes_subnet_id          = "ocid1.subnet.oc1..nodes"
+    cluster_type             = "BASIC_CLUSTER"
+    k8s_version              = "v1.34.10"
+    node_shape               = "VM.Standard.E5.Flex"
+    model_pool_size          = 1
+    model_pool_ocpus         = 1
+    model_pool_memory_in_gbs = 6
+  }
+
+  assert {
+    condition     = oci_containerengine_node_pool.model.node_shape == "VM.Standard.E5.Flex"
+    error_message = "Model node pool must use AMD VM.Standard.E5.Flex"
+  }
+
+  assert {
+    condition     = oci_containerengine_node_pool.model.node_shape_config[0].ocpus == 1
+    error_message = "Model node pool must be configured with 1 OCPU"
+  }
+
+  assert {
+    condition     = oci_containerengine_node_pool.model.node_shape_config[0].memory_in_gbs == 6
+    error_message = "Model node pool must be configured with 6 GB RAM"
+  }
+
+  assert {
+    condition     = oci_containerengine_node_pool.model.node_source_details[0].image_id == "ocid1.image.oc1.iad.amd-test-image"
+    error_message = "Model node pool must resolve to non-GPU AMD image"
   }
 }
