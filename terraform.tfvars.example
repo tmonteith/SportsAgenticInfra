@@ -8,7 +8,8 @@ prefix               = "sportsagentic"
 cluster_type         = "BASIC_CLUSTER"
 k8s_version          = "v1.34.10"
 node_shape           = "VM.Standard.A1.Flex" # Or "VM.Standard.E5.Flex" / "VM.Standard.E4.Flex" if region is out of Ampere ARM capacity
-domain_name          = "sportagentic.dev"
+domain_name          = "sportsagentic.dev"
+ingress_public_ip    = "147.224.142.121"
 
 # Optional: override node image OCID if dynamic discovery is not desired
 # node_image_id      = ""
@@ -21,5 +22,5 @@ model_pool_size          = 1
 model_pool_ocpus         = 4
 model_pool_memory_in_gbs = 24
 
-letsencrypt_email = "admin@sportagentic.dev"
-email             = "admin@sportagentic.dev"
+letsencrypt_email = "admin@sportsagentic.dev"
+email             = "admin@sportsagentic.dev"

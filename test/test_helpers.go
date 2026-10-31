@@ -24,7 +24,7 @@ func createBaseTerraformOptions(t *testing.T, terraformDir string, extraVars map
 		"region":         getEnv("OCI_REGION", "us-ashburn-1"),
 		"prefix":         "sportsagentic-test",
 		"cluster_type":   "BASIC_CLUSTER",
-		"domain_name":    "sportagentic.dev",
+		"domain_name":    "sportsagentic.dev",
 	}
 
 	for k, v := range extraVars {

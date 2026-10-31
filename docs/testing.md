@@ -27,7 +27,7 @@ Tests module inputs, CIDR math, OKE node pool shapes, taints, NoSQL throughput l
 ### Test Files
 * [`tests/network.tftest.hcl`](../tests/network.tftest.hcl): Asserts VCN CIDR, DNS label, public subnet routing to IGW, private subnet routing to NAT/Service Gateways, and strict `prohibit_public_ip_on_vnic` enforcement on worker nodes.
 * [`tests/oke.tftest.hcl`](../tests/oke.tftest.hcl): Asserts `BASIC_CLUSTER` type, Flannel overlay networking, services pool ARM `VM.Standard.A1.Flex` (2 OCPU / 12 GB RAM), and model pool sitting at `size = 0` (4 OCPU / 24 GB RAM, tainted `workload-role=model:NoSchedule`).
-* [`tests/platform.tftest.hcl`](../tests/platform.tftest.hcl): Asserts NoSQL table limits (50 read/write units, 25 GB storage), read-only MCP NoSQL IAM policy statements, public DNS zone `sportagentic.dev`, OCIR repository names, and K8s namespaces/RBAC.
+* [`tests/platform.tftest.hcl`](../tests/platform.tftest.hcl): Asserts NoSQL table limits (50 read/write units, 25 GB storage), read-only MCP NoSQL IAM policy statements, public DNS zone `sportsagentic.dev`, OCIR repository names, and K8s namespaces/RBAC.
 
 ### Running Unit Tests Locally
 ```bash

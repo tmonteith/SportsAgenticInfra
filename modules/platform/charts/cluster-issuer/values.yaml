@@ -1,5 +1,18 @@
-email: admin@sportagentic.dev
+email: admin@sportsagentic.dev
 ingressClass: nginx
-domain: sportagentic.dev
+domain: sportsagentic.dev
 productionServer: https://acme-v02.api.letsencrypt.org/directory
 stagingServer: https://acme-staging-v02.api.letsencrypt.org/directory
+
+certificate:
+  enabled: true
+  name: sportsagentic-tls
+  namespace: sportsagentic
+  secretName: sportsagentic-tls
+  issuer: letsencrypt-prod
+  subdomains:
+    - www
+    - agent
+    - api
+    - mcp
+    - inference

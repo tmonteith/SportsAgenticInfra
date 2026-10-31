@@ -67,3 +67,13 @@ output "dns_nameservers" {
   description = "Authoritative OCI nameservers to delegate at Porkbun."
   value       = module.platform.dns_nameservers
 }
+
+output "ingress_public_ip" {
+  description = "Public IP address of the Ingress Load Balancer for DNS routing."
+  value       = module.platform.ingress_public_ip
+}
+
+output "dns_records" {
+  description = "Configured DNS A records in the authoritative zone."
+  value       = module.platform.dns_records
+}

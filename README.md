@@ -9,12 +9,12 @@ Production-grade Infrastructure-as-Code (IaC) repository for **SportsAgentic**, 
 ```
                                   INTERNET
                                       │
-                         [Porkbun: sportagentic.dev]
+                         [Porkbun: sportsagentic.dev]
                                       │ (NS Delegation)
                                       ▼
                         ┌───────────────────────────┐
                         │    OCI Public DNS Zone    │
-                        │    (sportagentic.dev)     │
+                        │    (sportsagentic.dev)    │
                         └─────────────┬─────────────┘
                                       │
                                       ▼
@@ -115,5 +115,5 @@ eval "$(tofu output -raw github_secrets_export_script)"
 * **Drift Detection**: Runs daily at 06:00 UTC and alerts via GitHub Issues if manual changes occur in OCI.
 
 ### 3. Domain Delegation
-Follow [`docs/dns-setup.md`](./docs/dns-setup.md) to point `sportagentic.dev` from Porkbun to your OCI Anycast nameservers.
+Follow [`docs/dns-setup.md`](./docs/dns-setup.md) to point `sportsagentic.dev` from Porkbun to your OCI Anycast nameservers.
 

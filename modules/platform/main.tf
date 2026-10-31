@@ -82,6 +82,51 @@ resource "oci_dns_zone" "main" {
   }
 }
 
+# Optional Reserved Public IP for Ingress Load Balancer
+resource "oci_core_public_ip" "ingress" {
+  count          = var.ingress_public_ip == "" ? 1 : 0
+  compartment_id = var.compartment_id
+  lifetime       = "RESERVED"
+  display_name   = "${var.prefix}-ingress-public-ip"
+
+  freeform_tags = {
+    "Project"   = "SportsAgentic"
+    "ManagedBy" = "OpenTofu"
+  }
+}
+
+locals {
+  lb_public_ip = var.ingress_public_ip != "" ? var.ingress_public_ip : (length(oci_core_public_ip.ingress) > 0 ? oci_core_public_ip.ingress[0].ip_address : "")
+}
+
+# DNS A Record: Apex domain (sportsagentic.dev -> Load Balancer IP)
+resource "oci_dns_rrset" "apex_a" {
+  zone_name_or_id = oci_dns_zone.main.id
+  domain          = var.domain_name
+  rtype           = "A"
+
+  items {
+    domain = var.domain_name
+    rtype  = "A"
+    rdata  = local.lb_public_ip
+    ttl    = 300
+  }
+}
+
+# DNS A Record: Wildcard subdomains (*.sportsagentic.dev -> Load Balancer IP)
+resource "oci_dns_rrset" "wildcard_a" {
+  zone_name_or_id = oci_dns_zone.main.id
+  domain          = "*.${var.domain_name}"
+  rtype           = "A"
+
+  items {
+    domain = "*.${var.domain_name}"
+    rtype  = "A"
+    rdata  = local.lb_public_ip
+    ttl    = 300
+  }
+}
+
 # 5. Kubernetes Namespaces
 resource "kubernetes_namespace_v1" "sportsagentic" {
   metadata {
@@ -190,9 +235,12 @@ resource "helm_release" "ingress_nginx" {
   values = [
     <<-EOT
     controller:
+      ingressClassResource:
+        default: true
       service:
         annotations:
           oci.oraclecloud.com/load-balancer-type: "lb"
+          oci.oraclecloud.com/reserved-ips: "${local.lb_public_ip}"
           service.beta.kubernetes.io/oci-load-balancer-shape: "flexible"
           service.beta.kubernetes.io/oci-load-balancer-shape-flex-min: "10"
           service.beta.kubernetes.io/oci-load-balancer-shape-flex-max: "10"

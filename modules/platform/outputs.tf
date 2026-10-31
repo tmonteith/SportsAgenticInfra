@@ -28,6 +28,19 @@ output "dns_nameservers" {
   value       = oci_dns_zone.main.nameservers
 }
 
+output "ingress_public_ip" {
+  description = "Public IP address of the Ingress Load Balancer for DNS routing."
+  value       = local.lb_public_ip
+}
+
+output "dns_records" {
+  description = "Configured DNS A records in the authoritative zone."
+  value = [
+    oci_dns_rrset.apex_a.domain,
+    oci_dns_rrset.wildcard_a.domain
+  ]
+}
+
 output "app_namespace" {
   description = "Target Kubernetes namespace for application deployments."
   value       = kubernetes_namespace_v1.sportsagentic.metadata[0].name

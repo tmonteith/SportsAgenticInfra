@@ -106,7 +106,13 @@ variable "node_fault_domains" {
 variable "domain_name" {
   description = "Authoritative domain name for SportsAgentic."
   type        = string
-  default     = "sportagentic.dev"
+  default     = "sportsagentic.dev"
+}
+
+variable "ingress_public_ip" {
+  description = "Public IP address of the Ingress Load Balancer for DNS routing. If empty, an OCI reserved public IP is created."
+  type        = string
+  default     = "147.224.142.121"
 }
 
 variable "model_pool_size" {
@@ -151,7 +157,7 @@ variable "ssh_public_key" {
 variable "letsencrypt_email" {
   description = "Email address for Let's Encrypt certificate notices."
   type        = string
-  default     = "admin@sportagentic.dev"
+  default     = "admin@sportsagentic.dev"
 }
 
 variable "email" {

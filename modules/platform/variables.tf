@@ -52,7 +52,13 @@ variable "lb_subnet_id" {
 variable "domain_name" {
   description = "Domain name for the public DNS zone and TLS certificates."
   type        = string
-  default     = "sportagentic.dev"
+  default     = "sportsagentic.dev"
+}
+
+variable "ingress_public_ip" {
+  description = "Public IP address of the Ingress Load Balancer for DNS routing. If empty, an OCI reserved public IP is created."
+  type        = string
+  default     = "147.224.142.121"
 }
 
 variable "nosql_table_name" {
@@ -82,5 +88,5 @@ variable "nosql_max_storage_in_gbs" {
 variable "letsencrypt_email" {
   description = "Contact email for Let's Encrypt certificate expiry notices."
   type        = string
-  default     = "admin@sportagentic.dev"
+  default     = "admin@sportsagentic.dev"
 }

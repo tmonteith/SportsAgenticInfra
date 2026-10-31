@@ -61,6 +61,7 @@ module "platform" {
   prefix                       = var.prefix
   lb_subnet_id                 = module.network.lb_subnet_id
   domain_name                  = var.domain_name
+  ingress_public_ip            = var.ingress_public_ip
   letsencrypt_email            = var.letsencrypt_email
 
   depends_on = [module.oke]

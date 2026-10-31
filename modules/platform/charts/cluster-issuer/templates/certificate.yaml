@@ -1,0 +1,21 @@
+{{- if .Values.certificate.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Values.certificate.name | default "sportsagentic-tls" }}
+  namespace: {{ .Values.certificate.namespace | default "sportsagentic" }}
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cluster-issuer
+spec:
+  secretName: {{ .Values.certificate.secretName | default "sportsagentic-tls" }}
+  issuerRef:
+    name: {{ .Values.certificate.issuer | default "letsencrypt-prod" }}
+    kind: ClusterIssuer
+  commonName: {{ .Values.domain }}
+  dnsNames:
+    - {{ .Values.domain }}
+    {{- range .Values.certificate.subdomains }}
+    - {{ printf "%s.%s" . $.Values.domain }}
+    {{- end }}
+{{- end }}

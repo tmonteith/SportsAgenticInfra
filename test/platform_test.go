@@ -20,7 +20,7 @@ func TestPlatformPlan(t *testing.T) {
 			"compartment_id":               getEnv("OCI_COMPARTMENT_OCID", "ocid1.compartment.oc1..test"),
 			"prefix":                       "sportsagentic-test",
 			"lb_subnet_id":                 "ocid1.subnet.oc1..lb",
-			"domain_name":                  "sportagentic.dev",
+			"domain_name":                  "sportsagentic.dev",
 			"mcp_nodes_dynamic_group_name": "sportsagentic-mcp-nodes-dg",
 		},
 		NoColor: true,
@@ -52,7 +52,7 @@ func TestPlatformIntegration(t *testing.T) {
 	assert.NotEmpty(t, tableID)
 
 	dnsZoneName := terraform.Output(t, terraformOptions, "dns_zone_name")
-	assert.Equal(t, "sportagentic.dev", dnsZoneName)
+	assert.Equal(t, "sportsagentic.dev", dnsZoneName)
 
 	dnsNameservers := terraform.OutputList(t, terraformOptions, "dns_nameservers")
 	assert.GreaterOrEqual(t, len(dnsNameservers), 2, "Expected at least 2 authoritative nameservers")

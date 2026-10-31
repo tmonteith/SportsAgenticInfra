@@ -19,12 +19,12 @@ run "test_platform_module" {
     enable_oke_workload_identity = false
     prefix                       = "sportsagentic"
     lb_subnet_id                 = "ocid1.subnet.oc1..lb"
-    domain_name                  = "sportagentic.dev"
+    domain_name                  = "sportsagentic.dev"
     nosql_table_name             = "sportsagentic_cfb"
     nosql_max_read_units         = 50
     nosql_max_write_units        = 50
     nosql_max_storage_in_gbs     = 25
-    letsencrypt_email            = "admin@sportagentic.dev"
+    letsencrypt_email            = "admin@sportsagentic.dev"
   }
 
   # NoSQL assertions
@@ -61,13 +61,33 @@ run "test_platform_module" {
 
   # DNS assertions
   assert {
-    condition     = oci_dns_zone.main.name == "sportagentic.dev"
-    error_message = "Public DNS zone name must be sportagentic.dev"
+    condition     = oci_dns_zone.main.name == "sportsagentic.dev"
+    error_message = "Public DNS zone name must be sportsagentic.dev"
   }
 
   assert {
     condition     = oci_dns_zone.main.zone_type == "PRIMARY"
     error_message = "Public DNS zone type must be PRIMARY"
+  }
+
+  assert {
+    condition     = oci_dns_rrset.apex_a.domain == "sportsagentic.dev"
+    error_message = "Apex DNS A record domain must be sportsagentic.dev"
+  }
+
+  assert {
+    condition     = oci_dns_rrset.apex_a.rtype == "A"
+    error_message = "Apex DNS record type must be A"
+  }
+
+  assert {
+    condition     = oci_dns_rrset.wildcard_a.domain == "*.sportsagentic.dev"
+    error_message = "Wildcard DNS A record domain must be *.sportsagentic.dev"
+  }
+
+  assert {
+    condition     = oci_dns_rrset.wildcard_a.rtype == "A"
+    error_message = "Wildcard DNS record type must be A"
   }
 
   # OCIR Container Repositories assertions
