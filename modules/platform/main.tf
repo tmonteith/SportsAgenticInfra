@@ -237,9 +237,19 @@ resource "helm_release" "ingress_nginx" {
     controller:
       ingressClassResource:
         default: true
+      # The OCI load balancer runs in TCP mode (TLS ends at nginx), so it can't add
+      # X-Forwarded-For. It sends the client address in a PROXY protocol v2 header
+      # instead, and nginx reads it. Both sides must change together.
+      config:
+        use-proxy-protocol: "true"
       service:
         annotations:
           oci.oraclecloud.com/load-balancer-type: "lb"
+          service.beta.kubernetes.io/oci-load-balancer-connection-proxy-protocol-version: "2"
+          # Send in-cluster traffic to the LB IP through the real load balancer, so it
+          # gets a PROXY header too. Without this, cert-manager's HTTP-01 self-check
+          # reaches nginx directly, nginx rejects it, and certificates stop renewing.
+          oci.oraclecloud.com/ingress-ip-mode: "proxy"
           oci.oraclecloud.com/reserved-ips: "${local.lb_public_ip}"
           service.beta.kubernetes.io/oci-load-balancer-shape: "flexible"
           service.beta.kubernetes.io/oci-load-balancer-shape-flex-min: "10"
