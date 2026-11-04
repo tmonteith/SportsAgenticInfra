@@ -1,0 +1,92 @@
+flowchart TD
+    subgraph DNS["DNS & Traffic Entry"]
+        Registrar["Porkbun Registrar<br/>(Domain: sportsagentic.dev)"]
+        OCIDNS["OCI Public Anycast DNS Zone<br/>(sportsagentic.dev)<br/>• Apex A: sportsagentic.dev<br/>• Wildcard A: *.sportsagentic.dev"]
+    end
+
+    subgraph OCI["Oracle Cloud Infrastructure (OCI) — Tenancy: sportsagentic-1"]
+        direction TB
+
+        subgraph VCN["Virtual Cloud Network (10.0.0.0/16)"]
+            direction TB
+            subgraph Gateways["VCN Gateways"]
+                IGW["Internet Gateway<br/>(0.0.0.0/0 Public Ingress/Egress)"]
+                NAT["NAT Gateway<br/>(0.0.0.0/0 Private Outbound)"]
+                SGW["Service Gateway<br/>(Oracle Services Network - OSN)"]
+            end
+
+            subgraph PublicSubnetLB["Public Load Balancer Subnet (10.0.1.0/24)"]
+                FlexLB["OCI Flexible Load Balancer<br/>Shape: 10 Mbps min / 10 Mbps max (Always Free)<br/>Reserved Public IP | Ports 80, 443"]
+            end
+
+            subgraph PublicSubnetAPI["Public K8s API Subnet (10.0.0.0/28)"]
+                OKEAPI["OKE Kubernetes API Server<br/>Port 6443 (Authorized CIDRs)"]
+            end
+
+            subgraph PrivateSubnetNodes["Private Worker Nodes Subnet (10.0.10.0/24)"]
+                subgraph OKECluster["Oracle Container Engine for Kubernetes (OKE v1.34+)"]
+                    direction TB
+                    subgraph NodePool["Consolidated Worker Node Pool ('model-pool')"]
+                        Node1["ARM Ampere A1 (VM.Standard.A1.Flex)<br/>4 OCPUs / 24 GB RAM (or E5 x86)<br/>Untainted: Platform + Workloads Co-exist"]
+                    end
+
+                    subgraph NS_Ingress["Namespace: ingress-nginx"]
+                        IngressCtrl["Ingress-Nginx Controller (v4.11.3)<br/>Routes / ➔ sportsagentic-web<br/>Routes /api/* ➔ sportsagentic-agent"]
+                    end
+
+                    subgraph NS_Cert["Namespace: cert-manager"]
+                        CertMgr["Cert-Manager (v1.16.1)<br/>ClusterIssuer: Let's Encrypt ACME<br/>Auto-renews sportsagentic-tls"]
+                    end
+
+                    subgraph NS_App["Namespace: sportsagentic"]
+                        WebPod["sportsagentic-web Pod<br/>React 18 SPA on Nginx (:8080)<br/>ClusterIP: :80"]
+                        AgentPod["sportsagentic-agent Pod<br/>FastAPI Orchestrator (:8000)<br/>ClusterIP: :8000"]
+                        MCPPod["sportsagentic MCP Pod<br/>Go MCP Server (:8080)<br/>ClusterIP: :8080"]
+                        InfPod["llama-server / Inference Pod<br/>FastAPI (:8081) + llama-server (:8082)<br/>ClusterIP: :8081"]
+                        ModelPVC[("PVC: model-cache<br/>10Gi GGUF Weight Volume")]
+                    end
+                end
+            end
+        end
+
+        subgraph PlatformServices["OCI Platform Services (OSN via Service Gateway)"]
+            NoSQL[("OCI NoSQL Database<br/>Table: sportsagentic_cfb<br/>Millisecond Timestamps TIMESTAMP(3)<br/>Provisioned Read/Write Units")]
+            OCIR["OCI Container Registry (OCIR)<br/>• sportsagentic/mcp-server<br/>• sportsagentic/agent-model<br/>• sportsagentic/web"]
+            StateBucket[("OCI Object Storage<br/>OpenTofu S3-compatible Remote State<br/>with Native State Locking")]
+        end
+
+        subgraph IAMSec["Security & IAM Governance"]
+            DynGroups["Dynamic Groups: oke-nodes-dg, mcp-nodes-dg"]
+            ServiceAccts["K8s RBAC: app-deployer-sa, mcp-server-sa"]
+            CIUser["CI Service Account: sportsagentic-app-ci"]
+        end
+    end
+
+    subgraph ExternalServices["External Cloud & Data APIs"]
+        CFBD["College Football Data (CFBD) API<br/>https://api.collegefootballdata.com"]
+        Gemini["Google Gemini Cloud API<br/>(Orchestrator Backup Failover)"]
+    end
+
+    Registrar -->|NS Delegation| OCIDNS
+    OCIDNS -->|A Record Resolution| FlexLB
+    FlexLB -->|NodePort 30000-32767| IngressCtrl
+
+    IngressCtrl -->|Host: sportsagentic.dev /| WebPod
+    IngressCtrl -->|Host: sportsagentic.dev /api/*| AgentPod
+
+    AgentPod -->|SSE http://sportsagentic:8080/sse| MCPPod
+    AgentPod -->|HTTP http://llama-server:8081/v1| InfPod
+    AgentPod -.->|Failover via NAT GW| Gemini
+
+    MCPPod -->|HTTPS via NAT GW| CFBD
+    MCPPod -.->|Read rows via Service GW| NoSQL
+
+    InfPod --- ModelPVC
+
+    Node1 --> SGW
+    SGW --> NoSQL
+    SGW --> OCIR
+    SGW --> StateBucket
+    Node1 --> NAT
+    NAT --> CFBD
+    NAT --> Gemini

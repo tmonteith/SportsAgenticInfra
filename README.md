@@ -6,44 +6,17 @@ Production-grade Infrastructure-as-Code (IaC) repository for **SportsAgentic**, 
 
 ## 🏛️ Architecture Overview
 
-```
-                                  INTERNET
-                                      │
-                         [Porkbun: sportsagentic.dev]
-                                      │ (NS Delegation)
-                                      ▼
-                        ┌───────────────────────────┐
-                        │    OCI Public DNS Zone    │
-                        │    (sportsagentic.dev)    │
-                        └─────────────┬─────────────┘
-                                      │
-                                      ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                    OCI Tenancy / Compartment: sportsagentic                  │
-│                                                                              │
-│   Virtual Cloud Network (10.0.0.0/16)                                        │
-│   ├─ Internet Gateway & NAT Gateway & Service Gateway (OSN)                  │
-│   │                                                                          │
-│   ├─ [Public Subnet: 10.0.1.0/24]                                            │
-│   │   └─ OCI Flexible Load Balancer (ingress-nginx)                          │
-│   │                                                                          │
-│   ├─ [Public Subnet: 10.0.0.0/28]                                            │
-│   │   └─ OKE Control Plane Endpoint (Kubernetes v1.31)                       │
-│   │                                                                          │
-│   └─ [Private Subnet: 10.0.10.0/24]                                          │
-│       ├─ Services Node Pool (VM.Standard.A1.Flex - 2 OCPU / 12 GB RAM)       │
-│       │   ├─ Ingress-Nginx Controller                                        │
-│       │   ├─ Cert-Manager (Let's Encrypt TLS)                                │
-│       │   └─ SportsAgentic MCP Server Pod (Namespace: sportsagentic)         │
-│       │                                                                      │
-│       └─ Model Node Pool (VM.Standard.A1.Flex - 4 OCPU / 24 GB RAM)          │
-│           └─ Sits at size = 0 (Tainted: workload-role=model:NoSchedule)      │
-│                                                                              │
-│   OCI Platform Services:                                                     │
-│   ├─ OCIR Repositories: sportsagentic/mcp-server, sportsagentic/agent-model  │
-│   └─ OCI NoSQL Table: sportsagentic_cfb (Scoped IAM Read Access)             │
-└──────────────────────────────────────────────────────────────────────────────┘
-```
+![SportsAgentic Infrastructure Architecture](docs/architecture.svg)
+
+Production cloud platform engineered on Oracle Cloud Infrastructure (OCI) using OpenTofu:
+- **DNS & Traffic Entry**: Porkbun domain registration delegated to OCI Public Anycast DNS Zone (`sportsagentic.dev`) with Apex and Wildcard A records resolving to an OCI Flexible Load Balancer (10 Mbps Always Free shape, reserved public IP).
+- **Virtual Cloud Network (10.0.0.0/16)**: Segregated subnets for Public Load Balancers (`10.0.1.0/24`), Kubernetes API (`10.0.0.0/28`), and Private Worker Nodes (`10.0.10.0/24`), interconnected via Internet Gateway, NAT Gateway, and Service Gateway (OSN).
+- **Compute & OKE Kubernetes (v1.34+)**: Consolidated single untainted worker node pool (`model-pool`) on ARM Ampere A1 (`VM.Standard.A1.Flex`, 4 OCPUs, 24 GB RAM) or E5 x86 shape, co-locating platform controllers and AI workloads without scheduling taints.
+- **Platform & Security Namespaces**:
+  - `ingress-nginx`: Ingress-Nginx controller (v4.11.3) managing routing for `sportsagentic.dev` (SPA root `/`) and API traffic (`/api/*` rewriting with proxy buffering disabled).
+  - `cert-manager`: Cert-Manager (v1.16.1) with Let's Encrypt ACME ClusterIssuer automating SSL/TLS certificate renewal (`sportsagentic-tls`).
+  - `sportsagentic`: Application workloads including `sportsagentic-web` (React SPA on Nginx), `sportsagentic-agent` (FastAPI orchestrator), `sportsagentic` (Go MCP server), and `llama-server` / `sportsagentic-inference` (FastAPI gateway + llama.cpp runtime with PVC model weight caching).
+- **OCI Managed Services**: OCI NoSQL database (`sportsagentic_cfb` table with millisecond timestamps), private OCIR container repositories (`sportsagentic/mcp-server`, `sportsagentic/agent-model`, `sportsagentic/web`), and S3-compatible remote state on OCI Object Storage with native state locking.
 
 ---
 
