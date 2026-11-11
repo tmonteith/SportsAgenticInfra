@@ -44,7 +44,10 @@ module "oke" {
   model_pool_memory_in_gbs = var.model_pool_memory_in_gbs
   ssh_public_key           = var.ssh_public_key
 
-  depends_on = [module.iam]
+  # No depends_on = [module.iam] here. A module-level depends_on defers every data
+  # source in this module, including the kubeconfig, whenever IAM has pending changes.
+  # The kubernetes and helm providers are configured from that kubeconfig, so a
+  # deferred read leaves them pointing at localhost and the whole plan fails.
 }
 
 # 4. Platform Module (OCIR, NoSQL, NoSQL IAM Policy, OCI DNS, Ingress-Nginx, cert-manager, K8s RBAC)
