@@ -107,6 +107,15 @@ Notes:
 - `sa-extractor` can create objects but not list or read them. Its "skip what is already landed"
   check therefore cannot list the landing bucket.
 
+## Tests
+
+`gcp/tests/gcp.tftest.hcl` checks the contract names, bucket settings, namespace locations, the
+MCP identity's gold-only access and the budget thresholds against a mocked provider:
+
+```bash
+cd gcp && tofu init -backend=false && tofu test
+```
+
 ## Outputs
 
 `bucket_names`, `catalog_name`, `iceberg_namespaces`, `iceberg_rest_catalog_uri`,

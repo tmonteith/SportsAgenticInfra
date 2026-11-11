@@ -30,8 +30,8 @@ variable "budget_alert_email" {
   sensitive   = true
 
   validation {
-    condition     = can(regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", var.budget_alert_email))
-    error_message = "budget_alert_email must be an email address."
+    condition     = length(trimspace(var.budget_alert_email)) > 0
+    error_message = "budget_alert_email must be set."
   }
 }
 

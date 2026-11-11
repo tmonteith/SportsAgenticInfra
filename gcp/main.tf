@@ -47,10 +47,11 @@ locals {
     "mcp-server-gold"    = { sa = "mcp-server", namespace = "gold", role = "roles/biglake.viewer" }
   }
 
-  # Identities scoped to single namespaces still need to read the catalog
-  # itself (the Iceberg REST client loads the catalog config first). They get a
-  # custom role holding only biglake.catalogs.get, which grants no namespace,
-  # table or data access.
+  # Identities scoped to single namespaces probably also need to read the
+  # catalog itself (Iceberg REST clients load the catalog config first, and the
+  # docs do not say whether namespace grants cover that call). They get a custom
+  # role holding only biglake.catalogs.get, which grants no namespace, table or
+  # data access.
   catalog_getters = toset(["spark-drain", "mcp-server"])
 
   # Budget alerts at $5, $10 and $20 (contract). The budget amount is the
@@ -194,13 +195,13 @@ resource "google_biglake_iceberg_catalog" "sa_catalog" {
   name             = local.catalog_name
   catalog_type     = "CATALOG_TYPE_BIGLAKE"
   credential_mode  = "CREDENTIAL_MODE_END_USER"
-  default_location = google_storage_bucket.this["warehouse"].url
+  default_location = "gs://${google_storage_bucket.this["warehouse"].name}"
   description      = "SportsAgentic lakehouse: bronze and silver in the warehouse bucket, gold in the gold bucket."
 
   restricted_locations_config {
     restricted_locations = [
-      google_storage_bucket.this["warehouse"].url,
-      google_storage_bucket.this["gold"].url,
+      "gs://${google_storage_bucket.this["warehouse"].name}",
+      "gs://${google_storage_bucket.this["gold"].name}",
     ]
   }
 
@@ -214,7 +215,7 @@ resource "google_biglake_iceberg_namespace" "this" {
   namespace_id = each.key
 
   properties = {
-    location = "${google_storage_bucket.this[each.value].url}/${each.key}"
+    location = "gs://${google_storage_bucket.this[each.value].name}/${each.key}"
   }
 }
 
