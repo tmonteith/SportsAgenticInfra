@@ -1,0 +1,227 @@
+# Values for the official Apache Airflow Helm chart (pinned in modules/data-platform).
+# Installed by helm_release.airflow. The module adds a second values document with the
+# environment-specific settings: service account and Secret names, the GCP environment
+# variables and key mount, git-sync source and the storage class.
+#
+# Sizing rule (plan, WS2): the sum of all Airflow memory limits, Postgres and sidecars
+# included, stays at or under 3 GiB. modules/data-platform reads this file, adds up the
+# limits and refuses to plan if the total is over. Keep every memory limit in Mi or Gi.
+# The budget table is in docs/data-platform.md.
+
+airflowVersion: "3.2.2"
+defaultAirflowRepository: apache/airflow
+defaultAirflowTag: "3.2.2"
+
+images:
+  airflow:
+    # Official multi-arch image (linux/amd64, linux/arm64). Its default extras include
+    # the google, cncf-kubernetes and fab providers, so no custom image is needed.
+    repository: apache/airflow
+    tag: "3.2.2"
+    pullPolicy: IfNotPresent
+  gitSync:
+    repository: registry.k8s.io/git-sync/git-sync
+    tag: v4.4.2
+    pullPolicy: IfNotPresent
+
+# Tasks run as subprocesses of the scheduler. No Celery, no Kubernetes executor.
+executor: LocalExecutor
+
+# The module creates the service account "airflow" and a namespace-scoped Role that lets
+# it manage pods in "data" (KubernetesPodOperator). The chart creates no RBAC of its own.
+rbac:
+  create: false
+allowPodLaunching: false
+allowJobLaunching: false
+multiNamespaceMode: false
+
+# Port-forward only: no Ingress, ClusterIP services, no network policies (Flannel does
+# not enforce them on this cluster).
+ingress:
+  apiServer:
+    enabled: false
+  web:
+    enabled: false
+  flower:
+    enabled: false
+  statsd:
+    enabled: false
+  pgbouncer:
+    enabled: false
+networkPolicies:
+  enabled: false
+
+# Admin users are created by hand after install (see docs/data-platform.md), so no
+# password ever sits in values, state or Git.
+createUserJob:
+  enabled: false
+  useHelmHooks: false
+  applyCustomEnv: false
+
+# OpenTofu's helm_release waits for pods; with Helm hooks the migration job would only run
+# after that wait and the install would deadlock. The chart docs require these two values
+# for Terraform-style installs.
+migrateDatabaseJob:
+  enabled: true
+  useHelmHooks: false
+  applyCustomEnv: false
+  ttlSecondsAfterFinished: 300
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 448Mi
+
+scheduler:
+  replicas: 1
+  # LocalExecutor runs KubernetesPodOperator tasks inside this pod, so it needs the
+  # service account token.
+  serviceAccount:
+    automountServiceAccountToken: true
+  resources:
+    requests:
+      cpu: 150m
+      memory: 640Mi
+    limits:
+      cpu: 1000m
+      memory: 1024Mi
+  logGroomerSidecar:
+    enabled: true
+    retentionDays: 7
+    resources:
+      requests:
+        cpu: 5m
+        memory: 16Mi
+      limits:
+        cpu: 50m
+        memory: 32Mi
+
+apiServer:
+  enabled: true
+  replicas: 1
+  service:
+    type: ClusterIP
+  resources:
+    requests:
+      cpu: 50m
+      memory: 320Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+dagProcessor:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 320Mi
+    limits:
+      cpu: 500m
+      memory: 448Mi
+  logGroomerSidecar:
+    enabled: true
+    retentionDays: 7
+    resources:
+      requests:
+        cpu: 5m
+        memory: 16Mi
+      limits:
+        cpu: 50m
+        memory: 32Mi
+
+# Not used with LocalExecutor. Persistence off, or the scheduler becomes a StatefulSet
+# with a 100Gi logs volume; only two new 50Gi volumes are allowed (Kafka, Postgres).
+workers:
+  persistence:
+    enabled: false
+  celery:
+    persistence:
+      enabled: false
+
+triggerer:
+  enabled: false
+
+webserver:
+  enabled: false
+
+statsd:
+  enabled: false
+
+redis:
+  enabled: false
+
+flower:
+  enabled: false
+
+pgbouncer:
+  enabled: false
+
+cleanup:
+  enabled: false
+
+databaseCleanup:
+  enabled: false
+
+logs:
+  persistence:
+    enabled: false
+  emptyDirConfig:
+    sizeLimit: 2Gi
+
+dags:
+  persistence:
+    enabled: false
+  gitSync:
+    enabled: true
+    rev: HEAD
+    depth: 1
+    maxFailures: 0
+    # Public repository; poll once a minute instead of the chart's 5s.
+    period: 60s
+    resources:
+      requests:
+        cpu: 5m
+        memory: 32Mi
+      limits:
+        cpu: 100m
+        memory: 64Mi
+
+# Bundled PostgreSQL (Bitnami subchart pinned by the Airflow chart).
+postgresql:
+  enabled: true
+  image:
+    repository: bitnamilegacy/postgresql
+    tag: "16.1.0-debian-11-r15"
+  shmVolume:
+    enabled: true
+    sizeLimit: 64Mi
+  primary:
+    extendedConfiguration: |
+      shared_buffers = 64MB
+      max_connections = 60
+    persistence:
+      enabled: true
+      size: 50Gi
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 384Mi
+
+config:
+  core:
+    load_examples: "False"
+    # At most three task processes at once inside the scheduler pod (memory guard).
+    parallelism: "3"
+  api:
+    # One API server worker instead of four.
+    workers: "1"
+  dag_processor:
+    parsing_processes: "1"
+  logging:
+    colored_console_log: "False"

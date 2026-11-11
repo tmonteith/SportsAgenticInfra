@@ -1,0 +1,29 @@
+# Values for the strimzi-kafka-operator Helm chart (pinned in modules/data-platform).
+# The operator runs in namespace "data" and watches only that namespace.
+# The Kafka cluster itself (KafkaNodePool, Kafka, KafkaTopic) is the local chart in
+# k8s/data/kafka, installed after this release because it needs the CRDs.
+
+# Empty list = watch the namespace the operator is installed in ("data").
+watchNamespaces: []
+watchAnyNamespace: false
+
+replicas: 1
+
+# Operator, Kafka and topic-operator images all come from quay.io/strimzi and are
+# tagged with the chart version (quay.io/strimzi/operator:1.3.1,
+# quay.io/strimzi/kafka:1.3.1-kafka-4.3.2), both published for linux/amd64 and arm64.
+defaultImageRegistry: quay.io
+defaultImageRepository: strimzi
+
+# The chart default is 384Mi for both; the CPU request is lowered to fit one OCPU.
+resources:
+  requests:
+    cpu: 50m
+    memory: 384Mi
+  limits:
+    cpu: 500m
+    memory: 384Mi
+
+# No Grafana here.
+dashboards:
+  enabled: false

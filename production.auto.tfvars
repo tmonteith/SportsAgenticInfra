@@ -11,6 +11,7 @@ compartment_name = "sportsagentic-1"
 node_shape         = "VM.Standard.E5.Flex"
 node_fault_domains = ["FAULT-DOMAIN-1", "FAULT-DOMAIN-2", "FAULT-DOMAIN-3"]
 
+# Memory budget and how a change reaches the running node: docs/data-platform.md.
 model_pool_size          = 1
-model_pool_ocpus         = 8
-model_pool_memory_in_gbs = 32
+model_pool_ocpus         = 1
+model_pool_memory_in_gbs = 12

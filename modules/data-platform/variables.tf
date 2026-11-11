@@ -1,0 +1,67 @@
+variable "compartment_id" {
+  description = "Compartment OCID for the OCIR repositories."
+  type        = string
+}
+
+variable "gcp_project_id" {
+  description = "GCP project ID of the lakehouse. Set as GCP_PROJECT in Airflow containers."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[a-z][a-z0-9-]{4,28}[a-z0-9]$", var.gcp_project_id))
+    error_message = "gcp_project_id must be a valid GCP project ID (6-30 lowercase letters, digits or hyphens)."
+  }
+}
+
+variable "storage_class_name" {
+  description = "Storage class for the Kafka and Airflow Postgres volumes."
+  type        = string
+  default     = "oci-bv"
+}
+
+variable "image_pull_secret_name" {
+  description = "Image pull secret for private OCIR images, referenced by the data service accounts. The Secret itself is not created here."
+  type        = string
+  default     = "ocir-pull"
+}
+
+variable "strimzi_chart_version" {
+  description = "Version of the strimzi-kafka-operator Helm chart (also the operator image tag)."
+  type        = string
+  default     = "1.3.1"
+}
+
+variable "airflow_chart_version" {
+  description = "Version of the official Apache Airflow Helm chart."
+  type        = string
+  default     = "1.22.0"
+}
+
+variable "airflow_credentials_secret_name" {
+  description = "Name of the Secret in namespace data holding Airflow's fernet key, API and JWT secrets, metadata DB connection and Postgres password. Created by hand before the Airflow release (see docs/data-platform.md); never managed by OpenTofu."
+  type        = string
+  default     = "airflow-credentials"
+}
+
+variable "airflow_dags_repo_url" {
+  description = "Git repository git-sync clones the Airflow DAGs from (public, no credentials)."
+  type        = string
+  default     = "https://github.com/tmonteith/SportsAgenticLakehouse.git"
+
+  validation {
+    condition     = startswith(var.airflow_dags_repo_url, "https://")
+    error_message = "airflow_dags_repo_url must be an https:// URL (public repository, no credentials)."
+  }
+}
+
+variable "airflow_dags_branch" {
+  description = "Branch git-sync checks out."
+  type        = string
+  default     = "main"
+}
+
+variable "airflow_dags_sub_path" {
+  description = "Directory inside the repository that holds the DAG files."
+  type        = string
+  default     = "dags"
+}
