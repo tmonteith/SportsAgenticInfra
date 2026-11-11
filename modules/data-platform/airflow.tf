@@ -42,6 +42,9 @@ locals {
     jwtSecretName          = var.airflow_credentials_secret_name
     data = {
       metadataSecretName = var.airflow_credentials_secret_name
+      # Celery only and never read with LocalExecutor; set so the chart does not create
+      # an empty broker-URL Secret as an install hook.
+      brokerUrlSecretName = var.airflow_credentials_secret_name
     }
     postgresql = {
       auth = {
