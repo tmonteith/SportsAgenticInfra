@@ -38,6 +38,7 @@ module "oke" {
   node_shape               = var.node_shape
   node_image_id            = var.node_image_id
   node_fault_domains       = var.node_fault_domains
+  node_availability_domain = var.node_availability_domain
   model_pool_size          = var.model_pool_size
   model_pool_ocpus         = var.model_pool_ocpus
   model_pool_memory_in_gbs = var.model_pool_memory_in_gbs

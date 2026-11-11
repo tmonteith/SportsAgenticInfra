@@ -18,3 +18,7 @@ model_pool_memory_in_gbs = 12
 
 # GCP project that holds the lakehouse (gcp/ stack). Not a secret.
 gcp_project_id = "sports-agent-511915"
+
+# Keep the node in the AD that holds its block volumes (llama models, Kafka, Airflow
+# Postgres). Volumes cannot follow a node to another AD.
+node_availability_domain = "AD-3"

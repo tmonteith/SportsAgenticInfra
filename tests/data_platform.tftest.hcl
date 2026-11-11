@@ -6,6 +6,16 @@ mock_provider "oci" {
           compartment_id = "ocid1.tenancy.oc1..test"
           id             = "ocid1.ad.oc1..test1"
           name           = "Uwhm:US-CHICAGO-1-AD-1"
+        },
+        {
+          compartment_id = "ocid1.tenancy.oc1..test"
+          id             = "ocid1.ad.oc1..test2"
+          name           = "Uwhm:US-CHICAGO-1-AD-2"
+        },
+        {
+          compartment_id = "ocid1.tenancy.oc1..test"
+          id             = "ocid1.ad.oc1..test3"
+          name           = "Uwhm:US-CHICAGO-1-AD-3"
         }
       ]
     }
@@ -213,5 +223,12 @@ run "test_production_node_sizing" {
   assert {
     condition     = oci_containerengine_node_pool.model.node_config_details[0].size == 1
     error_message = "Production node pool must have one node"
+  }
+
+  assert {
+    condition = length(oci_containerengine_node_pool.model.node_config_details[0].placement_configs) == 1 && alltrue([
+      for p in oci_containerengine_node_pool.model.node_config_details[0].placement_configs : endswith(p.availability_domain, "AD-3")
+    ])
+    error_message = "Production node pool must be pinned to AD-3, where its block volumes live"
   }
 }

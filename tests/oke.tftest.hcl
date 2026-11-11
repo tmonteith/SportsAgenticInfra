@@ -6,6 +6,16 @@ mock_provider "oci" {
           compartment_id = "ocid1.tenancy.oc1..test"
           id             = "ocid1.ad.oc1..test1"
           name           = "Uwhm:US-ASHBURN-AD-1"
+        },
+        {
+          compartment_id = "ocid1.tenancy.oc1..test"
+          id             = "ocid1.ad.oc1..test2"
+          name           = "Uwhm:US-ASHBURN-AD-2"
+        },
+        {
+          compartment_id = "ocid1.tenancy.oc1..test"
+          id             = "ocid1.ad.oc1..test3"
+          name           = "Uwhm:US-ASHBURN-AD-3"
         }
       ]
     }
