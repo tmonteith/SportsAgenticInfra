@@ -13,6 +13,19 @@ quiet: true
 #   Reason: Bootstrap state bucket uses Oracle-managed encryption keys to maintain zero-cost Always Free eligibility and avoid circular KMS dependency during bootstrap.
 # - CKV_OCI_17: Ensure VCN inbound security lists are stateless.
 #   Reason: OKE Kubernetes clusters and load balancers require stateful connection tracking for TCP streams (kubelet, Flannel overlay, NodePorts, and HTTP/S ingress).
+# - CKV2_OCI_3: Ensure Kubernetes engine cluster is configured with NSG(s).
+#   Reason: The OKE API endpoint, load balancer and worker subnets are each protected by a dedicated subnet security list in modules/network
+#   (k8s-api-sl, lb-sl, nodes-sl). Moving to NSGs (endpoint_config.nsg_ids) is a cluster networking change and belongs in its own reviewed PR.
+# - CKV2_OCI_5: Ensure Kubernetes Engine Cluster boot volume is configured with in-transit data encryption.
+#   Reason (temporary): node_config_details.is_pv_encryption_in_transit_enabled is an in-place node pool update in oracle/oci 9.11.0 (not ForceNew),
+#   but enabling it changes the live production node pool, only applies to newly launched nodes, and support with the A1.Flex OKE image is unverified.
+#   Enable it in a dedicated PR with a reviewed plan, then remove this skip.
+# - CKV2_OCI_6: Ensure Kubernetes Engine Cluster pod security policy is enforced.
+#   Reason: PodSecurityPolicy was removed in Kubernetes 1.25 and the cluster runs v1.34, so OKE cannot enable the PSP admission controller.
+#   Pod Security Admission (namespace labels) is the replacement.
 skip-check:
   - CKV_OCI_9
   - CKV_OCI_17
+  - CKV2_OCI_3
+  - CKV2_OCI_5
+  - CKV2_OCI_6
