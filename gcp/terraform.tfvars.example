@@ -1,0 +1,5 @@
+# Copy to terraform.tfvars (gitignored) and fill in. These three values are all
+# the stack needs; everything else has a default fixed by the lakehouse contracts.
+project_id                   = "sports-agent-511915"
+billing_account_display_name = "Main"
+budget_alert_email           = "REPLACE_WITH_ALERT_EMAIL"
