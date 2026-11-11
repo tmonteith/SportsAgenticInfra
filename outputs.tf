@@ -102,3 +102,13 @@ output "airflow_api_service" {
   description = "ClusterIP service of the Airflow API server (UI via kubectl port-forward)."
   value       = module.data_platform.airflow_api_service
 }
+
+output "secrets_vault_id" {
+  description = "OCID of the OCI Vault holding the GCP service account keys (scripts/mint-keys.sh --vault-id)."
+  value       = module.secrets.vault_id
+}
+
+output "secrets_master_key_id" {
+  description = "OCID of the vault master key (scripts/mint-keys.sh --key-id)."
+  value       = module.secrets.master_key_id
+}

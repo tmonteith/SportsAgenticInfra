@@ -78,3 +78,23 @@ module "data_platform" {
 
   depends_on = [module.oke]
 }
+
+# 6. Secrets Module (OCI Vault, External Secrets Operator, GCP key ExternalSecrets)
+module "secrets" {
+  source = "./modules/secrets"
+
+  tenancy_ocid         = var.tenancy_ocid
+  compartment_id       = var.compartment_id
+  compartment_name     = var.compartment_name
+  identity_domain_name = var.identity_domain_name
+  prefix               = var.prefix
+  region               = var.region
+
+  # Every worker node in the compartment. The MCP services group matches no node:
+  # its rule needs node_pool = 'services' and the only pool is tagged 'model'.
+  reader_dynamic_group_name = module.iam.oke_nodes_dynamic_group_name
+
+  # Module outputs, so the namespaces exist before the ExternalSecrets in them.
+  app_namespace  = module.platform.app_namespace
+  data_namespace = module.data_platform.namespace
+}
