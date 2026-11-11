@@ -23,4 +23,3 @@ model_pool_ocpus         = 4
 model_pool_memory_in_gbs = 24
 
 letsencrypt_email = "admin@sportsagentic.dev"
-email             = "admin@sportsagentic.dev"

@@ -159,9 +159,3 @@ variable "letsencrypt_email" {
   type        = string
   default     = "admin@sportsagentic.dev"
 }
-
-variable "email" {
-  description = "Email of the user apply terraform"
-  type        = string
-  default     = null
-}
