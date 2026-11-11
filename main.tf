@@ -68,3 +68,13 @@ module "platform" {
 
   depends_on = [module.oke]
 }
+
+# 5. Data Platform Module (namespace data, Strimzi Kafka, Airflow, lakehouse OCIR repos)
+module "data_platform" {
+  source = "./modules/data-platform"
+
+  compartment_id = var.compartment_id
+  gcp_project_id = var.gcp_project_id
+
+  depends_on = [module.oke]
+}

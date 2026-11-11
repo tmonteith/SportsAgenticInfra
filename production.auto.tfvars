@@ -15,3 +15,6 @@ node_fault_domains = ["FAULT-DOMAIN-1", "FAULT-DOMAIN-2", "FAULT-DOMAIN-3"]
 model_pool_size          = 1
 model_pool_ocpus         = 1
 model_pool_memory_in_gbs = 12
+
+# GCP project that holds the lakehouse (gcp/ stack). Not a secret.
+gcp_project_id = "sports-agent-511915"

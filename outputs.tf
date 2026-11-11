@@ -77,3 +77,28 @@ output "dns_records" {
   description = "Configured DNS A records in the authoritative zone."
   value       = module.platform.dns_records
 }
+
+output "data_namespace" {
+  description = "Kubernetes namespace of the data platform (Kafka, Airflow, lakehouse jobs)."
+  value       = module.data_platform.namespace
+}
+
+output "kafka_bootstrap" {
+  description = "In-cluster Kafka bootstrap address (KAFKA_BOOTSTRAP)."
+  value       = module.data_platform.kafka_bootstrap
+}
+
+output "kafka_topics" {
+  description = "Kafka topic names managed by the Strimzi topic operator."
+  value       = module.data_platform.kafka_topics
+}
+
+output "data_ocir_repository_ids" {
+  description = "OCIDs of the lakehouse OCIR repositories, keyed by image name."
+  value       = module.data_platform.ocir_repository_ids
+}
+
+output "airflow_api_service" {
+  description = "ClusterIP service of the Airflow API server (UI via kubectl port-forward)."
+  value       = module.data_platform.airflow_api_service
+}

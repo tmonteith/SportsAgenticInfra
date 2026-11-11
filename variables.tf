@@ -159,3 +159,8 @@ variable "letsencrypt_email" {
   type        = string
   default     = "admin@sportsagentic.dev"
 }
+
+variable "gcp_project_id" {
+  description = "GCP project ID of the lakehouse. Passed to the data platform as GCP_PROJECT."
+  type        = string
+}
