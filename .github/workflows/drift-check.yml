@@ -20,7 +20,7 @@ jobs:
       - name: Setup OpenTofu
         uses: opentofu/setup-opentofu@v1
         with:
-          tofu_version: "1.8.8"
+          tofu_version: "1.13.9"
 
       - name: Install OCI CLI
         run: |

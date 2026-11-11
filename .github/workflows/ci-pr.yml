@@ -25,7 +25,7 @@ jobs:
       - name: Setup OpenTofu
         uses: opentofu/setup-opentofu@v1
         with:
-          tofu_version: "1.8.8"
+          tofu_version: "1.13.9"
 
       - name: Check Formatting
         id: fmt
@@ -84,9 +84,20 @@ jobs:
       - name: Setup OpenTofu
         uses: opentofu/setup-opentofu@v1
         with:
-          tofu_version: "1.8.8"
+          tofu_version: "1.13.9"
 
       - name: Run Terratest Unit Checks
+        # The *Plan tests run a real `tofu plan`, so the OCI provider needs API-key auth.
+        # The provider reads these OCI_* variables directly, and test_helpers.go reads the
+        # tenancy, compartment and region ones so data sources query real OCI objects.
+        # Plan only: the *Integration (apply) tests are excluded by -run and RUN_INTEGRATION_TESTS.
+        env:
+          OCI_TENANCY_OCID: ${{ secrets.OCI_TENANCY_OCID }}
+          OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
+          OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+          OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
+          OCI_REGION: ${{ secrets.OCI_REGION }}
+          OCI_COMPARTMENT_OCID: ${{ secrets.OCI_COMPARTMENT_OCID }}
         run: |
           cd test
           go test -v -short -run "Test.*Plan" .
@@ -104,7 +115,7 @@ jobs:
       - name: Setup OpenTofu
         uses: opentofu/setup-opentofu@v1
         with:
-          tofu_version: "1.8.8"
+          tofu_version: "1.13.9"
 
       - name: Setup OCI Credentials
         env:
