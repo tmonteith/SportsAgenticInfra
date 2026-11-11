@@ -36,7 +36,7 @@ SportsAgenticInfra/
 │   └── terraform.tfvars.example
 ├── modules/
 │   ├── network/                   # I-1: VCN, subnets, IGW, NAT GW, Service GW, Route Tables, Security Lists
-│   ├── iam/                       # I-1: OKE worker node dynamic groups, cluster join policies, app CI user
+│   ├── iam/                       # I-1: OKE worker node dynamic groups, cluster join policies
 │   ├── oke/                       # I-2: OKE cluster, services node pool, tainted model pool @ size 0
 │   └── platform/                  # I-3: OCIR repos, NoSQL table + IAM read policy, DNS zone, Ingress, cert-manager
 ├── docs/

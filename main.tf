@@ -11,7 +11,7 @@ module "network" {
   prefix         = var.prefix
 }
 
-# 2. IAM Module (Dynamic Groups, Policies for OKE, and App Deployment)
+# 2. IAM Module (Dynamic Groups and Policies for OKE worker nodes)
 module "iam" {
   source = "./modules/iam"
 
@@ -20,7 +20,6 @@ module "iam" {
   compartment_name     = var.compartment_name
   identity_domain_name = var.identity_domain_name
   prefix               = var.prefix
-  email                = var.email
 }
 
 # 3. OKE Cluster Module (Control Plane + Services Pool + Model Pool @ 0)
