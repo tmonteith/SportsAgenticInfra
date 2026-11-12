@@ -84,7 +84,7 @@ module "data_platform" {
   depends_on = [module.oke]
 }
 
-# 6. Secrets Module (OCI Vault, External Secrets Operator, GCP key ExternalSecrets)
+# 6. Secrets Module (OCI Vault, External Secrets Operator, ExternalSecrets for GCP keys and Phase 2 secrets)
 module "secrets" {
   source = "./modules/secrets"
 
