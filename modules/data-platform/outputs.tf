@@ -42,3 +42,18 @@ output "memory_limits_mib" {
     airflow_total = local.airflow_memory_limit_total_mib
   }
 }
+
+output "ingest_release" {
+  description = "Name of the ingest Helm release (extractor CronJob and poller), or null while ingest_image_tag is empty."
+  value       = local.ingest_enabled ? helm_release.ingest[0].name : null
+}
+
+output "ingest_images" {
+  description = "Extractor and poller image references, or an empty map while ingest_image_tag is empty."
+  value       = local.ingest_enabled ? local.ingest_images : {}
+}
+
+output "ingest_resources" {
+  description = "CPU (millicores) and memory (MiB) requests and limits of the extractor and poller containers."
+  value       = local.ingest_resources
+}

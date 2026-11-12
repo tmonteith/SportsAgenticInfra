@@ -1,8 +1,9 @@
-# GCP keys on OKE: OCI Vault and External Secrets
+# Secrets on OKE: OCI Vault and External Secrets
 
 Each OKE workload that calls GCP has its own service account key. The key goes from GCP into OCI
 Vault and from there into a Kubernetes Secret. It never passes through Git, OpenTofu state,
-container images, CI logs or chat.
+container images, CI logs or chat. Three other secrets (the CFBD API key, the telemetry salt and
+the OCIR pull secret for `data`) take the same path; see [Other secrets](#other-secrets).
 
 ```text
 scripts/mint-keys.sh ──► OCI Vault secret gcp-key-<workload>      (OCI, free default vault)
@@ -35,11 +36,14 @@ scripts/mint-keys.sh ──► OCI Vault secret gcp-key-<workload>      (OCI, fr
 - A small local chart, `modules/secrets/charts/oci-vault-sync`, with:
   - the `ClusterSecretStore` `oci-vault` (Oracle provider, `principalType: InstancePrincipal`),
     usable only from the `data` and `sportsagentic` namespaces;
-  - one `ExternalSecret` per workload, refreshed hourly, each producing a Secret with the single
-    data key `key.json`.
+  - seven `ExternalSecret`s, refreshed hourly, each copying one whole vault secret into one data
+    key: the four GCP keys (data key `key.json`) and the three [other secrets](#other-secrets).
+    An entry may set its own data key (`secretKey`) and Secret `type`; a type other than
+    `Opaque` is set through `target.template.type`.
 
 The vault secrets themselves are not OpenTofu resources: their content would land in state.
-Until `mint-keys.sh` has run, the ExternalSecrets report `SecretSyncedError`. That is expected.
+Until `mint-keys.sh` and `put-secret.sh` have run, the ExternalSecrets report
+`SecretSyncedError`. That is expected.
 
 The `data` namespace is created by the data platform module, and `sportsagentic` by the platform
 module. This module only references them.
@@ -115,27 +119,79 @@ volumes:
 
 Mount the whole directory (no `subPath`), so the kubelet updates the file after a rotation.
 
+## Other secrets
+
+Vault secret name = Kubernetes Secret name. The values are written by you with
+`scripts/put-secret.sh <name>`, never by OpenTofu. The script accepts only these three names.
+
+| Secret | Namespace | Type | Data key | Used by |
+| --- | --- | --- | --- | --- |
+| `cfbd-api-key` | `data` | `Opaque` | `CFBD_API_KEY` | extractor, poller |
+| `telemetry-salt` | `sportsagentic` | `Opaque` | `TELEMETRY_SALT` | orchestrator (telemetry `user_key`) |
+| `ocir-pull` | `data` | `kubernetes.io/dockerconfigjson` | `.dockerconfigjson` | every `data` pod pulling from OCIR |
+
+The hand-made `ocir-pull` in `sportsagentic` stays as it is. Do not create `ocir-pull` in `data`
+by hand: External Secrets owns it there.
+
+`put-secret.sh` reads the value from a hidden prompt (asked twice) or from stdin, never from the
+command line. It never echoes the value or writes it to disk, and creates the vault secret on the
+first run and a new current version after that. It uses the same inputs as `mint-keys.sh`
+(`OCI_VAULT_OCID`, `OCI_VAULT_KEY_OCID`, `OCI_COMPARTMENT_OCID`, `OCI_CLI_REGION`, exported as in
+[Minting the keys](#minting-the-keys-first-time)); `--dry-run` reads and checks the value and
+calls no API.
+
+```bash
+# CFBD API key: paste it at the hidden prompt
+scripts/put-secret.sh cfbd-api-key
+
+# Telemetry salt: generated and stored without being shown (at least 32 characters).
+# Set it once: a new salt changes every user_key from then on.
+openssl rand -hex 32 | scripts/put-secret.sh telemetry-salt
+
+# OCIR pull secret for data: copy the working one from sportsagentic. Run it as one pipe,
+# so the value never reaches the terminal.
+kubectl -n sportsagentic get secret ocir-pull -o jsonpath='{.data.\.dockerconfigjson}' \
+  | base64 -d | scripts/put-secret.sh ocir-pull
+```
+
+Or build `ocir-pull` from an OCIR auth token (the token is read hidden and only piped; works in
+zsh and bash):
+
+```bash
+printf 'OCIR username (<tenancy-namespace>/<user name>): '; read -r u
+printf 'OCIR auth token: '; stty -echo; read -r t; stty echo; echo
+printf '%s' "$t" \
+  | jq -Rc --arg u "$u" '{auths: {"ord.ocir.io": {username: $u, password: ., auth: (($u + ":" + .) | @base64)}}}' \
+  | scripts/put-secret.sh ocir-pull
+unset t u
+```
+
+To change a value later, rerun the same command. The Secret updates within an hour, or at once
+with the `force-sync` annotation the script prints. Pods read `CFBD_API_KEY` and `TELEMETRY_SALT`
+as environment variables at start-up, so restart them after a change.
+
 ## Security notes
 
 - **Instance principal.** The cluster is basic, so it has no workload identity. External Secrets
   authenticates to OCI as the worker node, which means any pod on that node could also reach the
-  instance metadata service and read these four vault secrets. The policy limits that to this one
-  vault; it cannot be narrowed to a single pod without an enhanced cluster.
+  instance metadata service and read every secret in this vault. The policy limits that to this
+  one vault; it cannot be narrowed to a single pod without an enhanced cluster.
 - **Dynamic group.** The policy names the dynamic group passed as `reader_dynamic_group_name`. It
   must match the worker node, or the vault answers `NotAuthorizedOrNotFound`.
 - **Store scope.** The `ClusterSecretStore` refuses ExternalSecrets from any namespace other than
   `data` and `sportsagentic`.
-- **Kubernetes RBAC.** Anyone who can read Secrets in `data` or `sportsagentic` can read the key
-  for that namespace. In `sportsagentic` that includes the app deployer role.
-- Never print a key: no `kubectl get secret -o yaml`, no `oci secrets secret-bundle get` to the
-  terminal, no `set -x` around the script.
+- **Kubernetes RBAC.** Anyone who can read Secrets in `data` or `sportsagentic` can read the
+  secrets in that namespace. In `sportsagentic` that includes the app deployer role.
+- Never print a secret: no `kubectl get secret -o yaml`, no `oci secrets secret-bundle get` to the
+  terminal, no `set -x` around the scripts.
 
 ## Checking it works
 
 ```bash
 kubectl get clustersecretstore oci-vault              # STATUS Valid, READY True
-kubectl get externalsecret -A                         # gcp-key-* SecretSynced
+kubectl get externalsecrets -A                        # all seven: STATUS SecretSynced, READY True
 kubectl describe externalsecret gcp-key-airflow -n data
+kubectl get secret ocir-pull -n data -o jsonpath='{.type}'  # kubernetes.io/dockerconfigjson
 ```
 
 ## Teardown

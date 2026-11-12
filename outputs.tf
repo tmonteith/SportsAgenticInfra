@@ -104,11 +104,11 @@ output "airflow_api_service" {
 }
 
 output "secrets_vault_id" {
-  description = "OCID of the OCI Vault holding the GCP service account keys (scripts/mint-keys.sh --vault-id)."
+  description = "OCID of the OCI Vault holding the GCP keys and the other synced secrets (scripts/mint-keys.sh and scripts/put-secret.sh --vault-id)."
   value       = module.secrets.vault_id
 }
 
 output "secrets_master_key_id" {
-  description = "OCID of the vault master key (scripts/mint-keys.sh --key-id)."
+  description = "OCID of the vault master key (scripts/mint-keys.sh and scripts/put-secret.sh --key-id)."
   value       = module.secrets.master_key_id
 }

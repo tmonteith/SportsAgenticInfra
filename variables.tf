@@ -175,3 +175,9 @@ variable "node_availability_domain" {
     error_message = "node_availability_domain must be empty or one of AD-1, AD-2, AD-3."
   }
 }
+
+variable "ingest_image_tag" {
+  description = "Tag of the lakehouse extractor and poller images in OCIR (the short commit SHA the SportsAgenticLakehouse ingest-images workflow pushed). Empty (the default) leaves the ingest release uninstalled."
+  type        = string
+  default     = ""
+}

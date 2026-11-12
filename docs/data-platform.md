@@ -11,6 +11,7 @@ The lakehouse's always-on pieces run in namespace `data` on the existing single 
 | Strimzi cluster operator (watches `data` only) | `helm_release.strimzi`, values `k8s/data/strimzi/values.yaml` | chart 1.3.1 |
 | Kafka `sa-kafka`, node pool `dual-role`, topics | `helm_release.kafka`, local chart `k8s/data/kafka` | Kafka 4.3.2 |
 | Airflow (scheduler, API server, DAG processor, Postgres) | `helm_release.airflow`, values `k8s/data/airflow/values.yaml` + module values | chart 1.22.0, Airflow 3.2.2 |
+| Extractor CronJob `extractor-nightly`, poller Deployment `poller` (once `ingest_image_tag` is set) | `helm_release.ingest`, local chart `k8s/data/ingest` | images `sportsagentic/extractor`, `sportsagentic/poller` |
 
 Shared-contract names used here: Kafka bootstrap `sa-kafka-kafka-bootstrap.data:9092`, topics `cfb.live_games` and `agent.events` (1 partition, 7 days), env vars `GOOGLE_APPLICATION_CREDENTIALS=/var/secrets/gcp/key.json`, `GCP_PROJECT`, `ICEBERG_CATALOG=sa_catalog`, `KAFKA_BOOTSTRAP`, key Secret `gcp-key-airflow`.
 
@@ -228,6 +229,44 @@ Today the node and the only volume (`llama-server-models`) are both in `US-CHICA
 
 ---
 
-## 8. Teardown
+## 8. Ingest: extractor and poller
+
+The CFBD extractor and the game-day poller (Go, built from the SportsAgenticLakehouse repo's `ingest/cmd/extractor` and `ingest/cmd/poller`) run from the local chart `k8s/data/ingest`, installed by `helm_release.ingest` (release `ingest`, namespace `data`). The release exists only when the root variable `ingest_image_tag` is non-empty (default `""`), so plans before the images exist change nothing.
+
+| Object | What it does | Requests / limits |
+| --- | --- | --- |
+| CronJob `extractor-nightly` | 03:30 America/Denver, `concurrencyPolicy: Forbid`, `--season=current --weeks=recent --force`: re-lands games and plays of the calendar weeks that overlap the last 3 days, plus the season's teams. In the offseason it makes one call (the calendar) and lands nothing. | 50m / 500m CPU, 128Mi / 256Mi memory |
+| Deployment `poller` (1 replica, `Recreate`) | Reads the season schedule every 12 h, sleeps until 15 minutes before the next kickoff, then polls `/scoreboard` every 60 s and publishes to `cfb.live_games` only the games whose state changed. Stops polling when every started game is final. | 10m / 100m CPU, 32Mi / 128Mi memory |
+| Job `extractor-backfill-<id>` | One-off, rendered by `scripts/backfill.sh` (below); never part of the release. | same as the CronJob |
+
+Both run as uid 65532 with a read-only root filesystem, no privilege escalation, all capabilities dropped and no Kubernetes API token. The module refuses to plan if a container lacks requests or limits or exceeds the Phase 2 budget (poller ≤ 10m CPU and 32Mi/128Mi memory, extractor ≤ 50m CPU and 128Mi/256Mi memory); `output.ingest_resources` shows the numbers. Their requests are below what section 3 budgeted for them (poller 128 Mi / 25m, extractor 256 Mi / 50m), so the memory headroom there is about 224 Mi better than shown.
+
+**Wiring.** Images `ord.ocir.io/<tenancy-namespace>/sportsagentic/{extractor,poller}:<ingest_image_tag>`; the namespace comes from `data.oci_objectstorage_namespace.ns` in the root `main.tf`. Env per the shared contract: both get `CFBD_API_KEY` (Secret `cfbd-api-key`, key `CFBD_API_KEY`) and `GCP_PROJECT`; the extractor also `GOOGLE_APPLICATION_CREDENTIALS=/var/secrets/gcp/key.json` (Secret `gcp-key-extractor`, data key `key.json`, mode 0440, group 65532) and runs as service account `extractor`; the poller also `KAFKA_BOOTSTRAP` and has no GCP key. Every pod pulls with `ocir-pull`. The landing bucket is `${GCP_PROJECT}-sa-landing`.
+
+**Turning it on.**
+
+1. The SportsAgentic workflow `ingest-images.yml` pushes both images on a push to `main`, tagged with the commit's short SHA (it needs the repo secrets `OCIR_REGISTRY`, `OCIR_NAMESPACE`, `OCIR_USERNAME`, `OCIR_AUTH_TOKEN`, same as the web image).
+2. Check that the three Secrets exist in `data` (External Secrets syncs them from OCI Vault): `kubectl -n data get secret cfbd-api-key ocir-pull gcp-key-extractor`. The release waits for the poller to become ready, so a missing Secret or image makes `tofu apply` fail after 5 minutes rather than leave a broken pod.
+3. Set `ingest_image_tag = "<short-sha>"` (for example in `production.auto.tfvars`), plan, show the plan to the owner, apply.
+
+**Backfill.** `scripts/backfill.sh 2023 2024 2025` (or `2023-2025`) reads the installed release's values with `helm get values`, renders the Job from the same chart with `--season=<list> --weeks=all`, and creates it with `kubectl create`. `--print` only prints the manifest; `--values FILE` renders without a cluster; `--force` re-lands what is already landed. Follow it with `kubectl -n data logs -f job/extractor-backfill-<id>`; the last line (`extractor_summary`) has the landed, skipped and failed counts and the CFBD calls made. A rerun skips everything already landed (one CFBD call per season, for its calendar). Finished Jobs delete themselves after 7 days.
+
+**CFBD calls** (every call is logged as `cfbd_call` and counted in the summaries; the quota is shared with the live MCP tools):
+
+| Run | Calls | How |
+| --- | --- | --- |
+| Backfill, per season | about 34 | calendar 1 + teams 1 + games and plays for ~15 regular weeks and 1 postseason week |
+| Nightly, in season | 4 to 6 (about 150 a month) | calendar 1 + teams 1 + games and plays for 1 or 2 open weeks |
+| Nightly, offseason | 1 | calendar only |
+| Poller, idle | 2 a day | schedule (`/games`, both season types) every 12 h |
+| Poller, game day | one per minute polled | a full Saturday (11:45 ET to the end of the last late-night game) about 850 to 1,000; one weekday night game about 230; a Friday with staggered kickoffs up to about 450. A typical in-season week is roughly 1,500 to 2,000. |
+
+Retries after `429` or `5xx` add to these (exponential backoff from 2 s, `Retry-After` honored; at most 5 retries capped at 60 s for the extractor, 3 retries capped at 30 s for the poller).
+
+**Turning it off.** Set `ingest_image_tag = ""` and apply: the release is uninstalled (CronJob and Deployment deleted). Landed objects stay in the bucket.
+
+---
+
+## 9. Teardown
 
 `tofu destroy -target=module.data_platform` uninstalls the Helm releases and deletes namespace `data`, which deletes the Kafka and Postgres volumes with it (reclaim policy Delete): all Kafka data and Airflow history are lost. Helm never deletes CRDs; remove Strimzi's afterwards with `kubectl delete crd -l app=strimzi` if nothing else uses them.
