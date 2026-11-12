@@ -168,6 +168,18 @@ run "test_data_platform_module" {
     error_message = "Airflow must mount Secret gcp-key-airflow as an optional volume"
   }
 
+  # CRI-O on the nodes enforces short-name mode: a registry-less image name never pulls.
+  assert {
+    condition = alltrue([
+      for r in [
+        yamldecode(helm_release.airflow.values[0]).defaultAirflowRepository,
+        yamldecode(helm_release.airflow.values[0]).images.airflow.repository,
+        yamldecode(helm_release.airflow.values[0]).images.gitSync.repository,
+      ] : can(regex("^[a-z0-9.-]+\\.[a-z]+/", r))
+    ])
+    error_message = "Airflow image repositories must include the registry host (e.g. docker.io/), because CRI-O rejects short names"
+  }
+
   # No public exposure
   assert {
     condition     = yamldecode(helm_release.airflow.values[0]).apiServer.service.type == "ClusterIP" && !yamldecode(helm_release.airflow.values[0]).ingress.apiServer.enabled && !yamldecode(helm_release.airflow.values[0]).ingress.web.enabled
