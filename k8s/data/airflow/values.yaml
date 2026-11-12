@@ -9,14 +9,17 @@
 # The budget table is in docs/data-platform.md.
 
 airflowVersion: "3.2.2"
-defaultAirflowRepository: apache/airflow
+# Image names must include the registry. The OKE nodes run CRI-O with short-name mode set
+# to enforcing, so a bare "apache/airflow" fails with ImageInspectError ("returns
+# ambiguous list") instead of falling back to Docker Hub.
+defaultAirflowRepository: docker.io/apache/airflow
 defaultAirflowTag: "3.2.2"
 
 images:
   airflow:
     # Official multi-arch image (linux/amd64, linux/arm64). Its default extras include
     # the google, cncf-kubernetes and fab providers, so no custom image is needed.
-    repository: apache/airflow
+    repository: docker.io/apache/airflow
     tag: "3.2.2"
     pullPolicy: IfNotPresent
   gitSync:
