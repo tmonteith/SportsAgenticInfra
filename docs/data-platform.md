@@ -245,9 +245,9 @@ Both run as uid 65532 with a read-only root filesystem, no privilege escalation,
 
 **Turning it on.**
 
-1. The SportsAgentic workflow `ingest-images.yml` pushes both images on a push to `main`, tagged with the commit's short SHA (it needs the repo secrets `OCIR_REGISTRY`, `OCIR_NAMESPACE`, `OCIR_USERNAME`, `OCIR_AUTH_TOKEN`, same as the web image).
+1. The SportsAgenticLakehouse workflow `ingest-images.yml` pushes both images on a push to `main`, tagged with the commit's short SHA (it needs the repo secrets `OCIR_REGISTRY`, `OCIR_NAMESPACE`, `OCIR_USERNAME`, `OCIR_AUTH_TOKEN`, same as the web image).
 2. Check that the three Secrets exist in `data` (External Secrets syncs them from OCI Vault): `kubectl -n data get secret cfbd-api-key ocir-pull gcp-key-extractor`. The release waits for the poller to become ready, so a missing Secret or image makes `tofu apply` fail after 5 minutes rather than leave a broken pod.
-3. Set `ingest_image_tag = "<short-sha>"` (for example in `production.auto.tfvars`), plan, show the plan to the owner, apply.
+3. Set `ingest_image_tag = "<short-sha>"` in `production.auto.tfvars` and commit it, so CI and every local plan keep the release installed. Plan, show the plan to the owner, apply. The current tag is in `production.auto.tfvars`.
 
 **Backfill.** `scripts/backfill.sh 2023 2024 2025` (or `2023-2025`) reads the installed release's values with `helm get values`, renders the Job from the same chart with `--season=<list> --weeks=all`, and creates it with `kubectl create`. `--print` only prints the manifest; `--values FILE` renders without a cluster; `--force` re-lands what is already landed. Follow it with `kubectl -n data logs -f job/extractor-backfill-<id>`; the last line (`extractor_summary`) has the landed, skipped and failed counts and the CFBD calls made. A rerun skips everything already landed (one CFBD call per season, for its calendar). Finished Jobs delete themselves after 7 days.
 
