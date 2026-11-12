@@ -74,6 +74,20 @@ run "test_secrets_module_plan" {
     ])
     error_message = "GCP key secrets must be gcp-key-{extractor,spark-drain,airflow} in data and gcp-key-mcp-server in sportsagentic"
   }
+
+  # Contract (amendment G3): seven synced Secrets with their data keys and types
+  assert {
+    condition = jsonencode(output.external_secrets) == jsonencode([
+      { name = "gcp-key-extractor", namespace = "data", secretKey = "key.json", type = "Opaque" },
+      { name = "gcp-key-spark-drain", namespace = "data", secretKey = "key.json", type = "Opaque" },
+      { name = "gcp-key-airflow", namespace = "data", secretKey = "key.json", type = "Opaque" },
+      { name = "gcp-key-mcp-server", namespace = "sportsagentic", secretKey = "key.json", type = "Opaque" },
+      { name = "cfbd-api-key", namespace = "data", secretKey = "CFBD_API_KEY", type = "Opaque" },
+      { name = "telemetry-salt", namespace = "sportsagentic", secretKey = "TELEMETRY_SALT", type = "Opaque" },
+      { name = "ocir-pull", namespace = "data", secretKey = ".dockerconfigjson", type = "kubernetes.io/dockerconfigjson" },
+    ])
+    error_message = "Synced secrets must be the four gcp-key-* (key.json), cfbd-api-key (data, CFBD_API_KEY), telemetry-salt (sportsagentic, TELEMETRY_SALT) and ocir-pull (data, .dockerconfigjson, kubernetes.io/dockerconfigjson)"
+  }
 }
 
 run "test_secrets_module_apply_with_mocks" {
@@ -111,8 +125,19 @@ run "test_secrets_module_apply_with_mocks" {
     error_message = "Only the data and sportsagentic namespaces may use the ClusterSecretStore"
   }
 
+  # The chart receives exactly the seven contract entries
   assert {
-    condition     = length(yamldecode(helm_release.oci_vault_sync.values[0]).externalSecrets) == 4
-    error_message = "There must be exactly one ExternalSecret per workload"
+    condition = toset([
+      for e in yamldecode(helm_release.oci_vault_sync.values[0]).externalSecrets : "${e.namespace}/${e.name}:${e.secretKey}:${e.type}"
+      ]) == toset([
+      "data/gcp-key-extractor:key.json:Opaque",
+      "data/gcp-key-spark-drain:key.json:Opaque",
+      "data/gcp-key-airflow:key.json:Opaque",
+      "sportsagentic/gcp-key-mcp-server:key.json:Opaque",
+      "data/cfbd-api-key:CFBD_API_KEY:Opaque",
+      "sportsagentic/telemetry-salt:TELEMETRY_SALT:Opaque",
+      "data/ocir-pull:.dockerconfigjson:kubernetes.io/dockerconfigjson",
+    ]) && length(yamldecode(helm_release.oci_vault_sync.values[0]).externalSecrets) == 7
+    error_message = "The chart must get exactly seven ExternalSecrets: the four GCP keys, cfbd-api-key, telemetry-salt and ocir-pull, each with its contract namespace, data key and type"
   }
 }

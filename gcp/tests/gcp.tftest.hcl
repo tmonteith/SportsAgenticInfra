@@ -85,6 +85,16 @@ run "test_gcp_stack" {
     error_message = "Service accounts must be sa-{extractor,spark-drain,airflow,mcp-server,spark-runner}"
   }
 
+  # The extractor creates and views landing objects (amendment G1) and has no
+  # access to any other bucket
+  assert {
+    condition = toset([for k, m in google_storage_bucket_iam_member.this : "${m.bucket}:${m.role}" if startswith(k, "extractor-")]) == toset([
+      "sports-agent-511915-sa-landing:roles/storage.objectCreator",
+      "sports-agent-511915-sa-landing:roles/storage.objectViewer",
+    ])
+    error_message = "sa-extractor must have exactly objectCreator and objectViewer on the landing bucket and nothing on the other buckets"
+  }
+
   # The MCP identity reaches gold only
   assert {
     condition = toset([for k, m in google_storage_bucket_iam_member.this : "${m.bucket}:${m.role}" if startswith(k, "mcp-server-")]) == toset([

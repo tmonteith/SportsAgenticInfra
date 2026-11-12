@@ -81,7 +81,7 @@ own project, which is this one.
 
 | Service account | Grants | Where |
 | --- | --- | --- |
-| `sa-extractor` | `storage.objectCreator` | landing bucket |
+| `sa-extractor` | `storage.objectCreator`, `storage.objectViewer` | landing bucket |
 | `sa-spark-drain` | `storage.objectAdmin` | warehouse bucket |
 | | `biglake.editor` | namespaces `bronze`, `silver` |
 | | custom `saBiglakeCatalogGetter` (`biglake.catalogs.get` only) | catalog `sa_catalog` |
@@ -104,13 +104,14 @@ Notes:
 
 - `roles/dataproc.worker` includes object read and write on every bucket in the project (Dataproc
   needs it for its staging buckets). `sa-spark-runner` has no key and only runs inside GCP.
-- `sa-extractor` can create objects but not list or read them. Its "skip what is already landed"
-  check therefore cannot list the landing bucket.
+- `sa-extractor` can create, list and read landing objects (for its "skip what is already landed"
+  check) but cannot overwrite or delete them: `objectCreator` without `objectAdmin`.
 
 ## Tests
 
 `gcp/tests/gcp.tftest.hcl` checks the contract names, bucket settings, namespace locations, the
-MCP identity's gold-only access and the budget thresholds against a mocked provider:
+extractor's landing-only access, the MCP identity's gold-only access and the budget thresholds
+against a mocked provider:
 
 ```bash
 cd gcp && tofu init -backend=false && tofu test

@@ -28,15 +28,18 @@ locals {
   }
 
   # Bucket-level grants, one row per line of the Security and auth table.
+  # sa-extractor also views landing (amendment G1): it lists objects and reads
+  # their metadata to skip responses it has already landed.
   bucket_iam = {
-    "extractor-landing"      = { sa = "extractor", bucket = "landing", role = "roles/storage.objectCreator" }
-    "spark-drain-warehouse"  = { sa = "spark-drain", bucket = "warehouse", role = "roles/storage.objectAdmin" }
-    "airflow-landing"        = { sa = "airflow", bucket = "landing", role = "roles/storage.objectViewer" }
-    "spark-runner-warehouse" = { sa = "spark-runner", bucket = "warehouse", role = "roles/storage.objectAdmin" }
-    "spark-runner-gold"      = { sa = "spark-runner", bucket = "gold", role = "roles/storage.objectAdmin" }
-    "spark-runner-landing"   = { sa = "spark-runner", bucket = "landing", role = "roles/storage.objectViewer" }
-    "spark-runner-jobs"      = { sa = "spark-runner", bucket = "jobs", role = "roles/storage.objectViewer" }
-    "mcp-server-gold"        = { sa = "mcp-server", bucket = "gold", role = "roles/storage.objectViewer" }
+    "extractor-landing"        = { sa = "extractor", bucket = "landing", role = "roles/storage.objectCreator" }
+    "extractor-landing-viewer" = { sa = "extractor", bucket = "landing", role = "roles/storage.objectViewer" }
+    "spark-drain-warehouse"    = { sa = "spark-drain", bucket = "warehouse", role = "roles/storage.objectAdmin" }
+    "airflow-landing"          = { sa = "airflow", bucket = "landing", role = "roles/storage.objectViewer" }
+    "spark-runner-warehouse"   = { sa = "spark-runner", bucket = "warehouse", role = "roles/storage.objectAdmin" }
+    "spark-runner-gold"        = { sa = "spark-runner", bucket = "gold", role = "roles/storage.objectAdmin" }
+    "spark-runner-landing"     = { sa = "spark-runner", bucket = "landing", role = "roles/storage.objectViewer" }
+    "spark-runner-jobs"        = { sa = "spark-runner", bucket = "jobs", role = "roles/storage.objectViewer" }
+    "mcp-server-gold"          = { sa = "mcp-server", bucket = "gold", role = "roles/storage.objectViewer" }
   }
 
   # Namespace-level BigLake grants. Namespace IAM is inherited by the tables in
