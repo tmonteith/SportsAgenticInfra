@@ -1,6 +1,7 @@
 # Data platform on OKE: namespace "data", workload service accounts and RBAC, OCIR
-# repositories for the lakehouse images, Strimzi + Kafka (kafka.tf) and Airflow
-# (airflow.tf). Names below come from the lakehouse build plan's shared contracts.
+# repositories for the lakehouse images, Strimzi + Kafka (kafka.tf), Airflow
+# (airflow.tf) and the extractor and poller (ingest.tf). Names below come from the
+# lakehouse build plan's shared contracts.
 
 locals {
   namespace = "data"

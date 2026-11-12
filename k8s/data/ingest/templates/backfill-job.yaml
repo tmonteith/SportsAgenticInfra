@@ -1,0 +1,21 @@
+{{- if .Values.backfill.enabled }}
+{{- $args := concat (list (printf "--season=%s" (required "backfill.seasons is required" .Values.backfill.seasons)) "--weeks=all") .Values.backfill.extraArgs }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: extractor-backfill-{{ required "backfill.id is required" .Values.backfill.id }}
+  labels:
+    {{- include "ingest.labels" (dict "root" $ "name" "extractor") | nindent 4 }}
+    sportsagentic.dev/run: backfill
+spec:
+  backoffLimit: {{ .Values.extractor.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.backfill.activeDeadlineSeconds }}
+  ttlSecondsAfterFinished: {{ .Values.backfill.ttlSecondsAfterFinished }}
+  template:
+    metadata:
+      labels:
+        {{- include "ingest.labels" (dict "root" $ "name" "extractor") | nindent 8 }}
+        sportsagentic.dev/run: backfill
+    spec:
+      {{- include "ingest.extractorPodSpec" (dict "root" $ "args" $args) | nindent 6 }}
+{{- end }}

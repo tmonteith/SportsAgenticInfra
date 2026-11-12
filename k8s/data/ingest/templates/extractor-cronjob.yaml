@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: extractor-nightly
+  labels:
+    {{- include "ingest.labels" (dict "root" $ "name" "extractor") | nindent 4 }}
+spec:
+  schedule: {{ .Values.extractor.schedule | quote }}
+  timeZone: {{ .Values.extractor.timeZone }}
+  concurrencyPolicy: {{ .Values.extractor.concurrencyPolicy }}
+  startingDeadlineSeconds: {{ .Values.extractor.startingDeadlineSeconds }}
+  successfulJobsHistoryLimit: {{ .Values.extractor.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.extractor.failedJobsHistoryLimit }}
+  jobTemplate:
+    metadata:
+      labels:
+        {{- include "ingest.labels" (dict "root" $ "name" "extractor") | nindent 8 }}
+    spec:
+      backoffLimit: {{ .Values.extractor.backoffLimit }}
+      activeDeadlineSeconds: {{ .Values.extractor.activeDeadlineSeconds }}
+      template:
+        metadata:
+          labels:
+            {{- include "ingest.labels" (dict "root" $ "name" "extractor") | nindent 12 }}
+        spec:
+          {{- include "ingest.extractorPodSpec" (dict "root" $ "args" .Values.extractor.args) | nindent 10 }}

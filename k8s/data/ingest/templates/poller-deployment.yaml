@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: poller
+  labels:
+    {{- include "ingest.labels" (dict "root" $ "name" "poller") | nindent 4 }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  # Never two pollers at once (duplicate messages during a rollout).
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: poller
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        {{- include "ingest.labels" (dict "root" $ "name" "poller") | nindent 8 }}
+    spec:
+      # No service account of its own and no GCP access: it only calls CFBD and Kafka.
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: {{ .Values.poller.terminationGracePeriodSeconds }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: poller
+          image: {{ include "ingest.image" (dict "root" $ "name" "poller") }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.poller.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+            {{- include "ingest.cfbdEnv" $ | nindent 12 }}
+            - name: KAFKA_BOOTSTRAP
+              value: {{ required "kafkaBootstrap is required" .Values.kafkaBootstrap | quote }}
+            - name: GOMEMLIMIT
+              value: {{ .Values.poller.goMemLimit | quote }}
+          resources:
+            {{- toYaml .Values.poller.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}

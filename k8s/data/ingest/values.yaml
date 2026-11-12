@@ -1,0 +1,92 @@
+# Lakehouse ingestion: the CFBD extractor (nightly CronJob, one-off backfill Job) and
+# the game-day poller, in namespace data.
+#
+# modules/data-platform installs this chart as release "ingest" only when the root
+# variable ingest_image_tag is set, and overrides the values marked "set by the module".
+# It also checks the resource budget below before planning.
+
+image:
+  # ord.ocir.io/<tenancy-namespace>/sportsagentic/<extractor|poller>:<tag>
+  registry: ord.ocir.io # set by the module
+  namespace: "" # OCIR tenancy namespace, set by the module
+  tag: "" # set by the module (ingest_image_tag); both images share it
+  pullPolicy: IfNotPresent
+
+# Synced into namespace data by External Secrets (modules/secrets).
+imagePullSecrets:
+  - name: ocir-pull
+
+gcpProject: "" # set by the module (GCP_PROJECT)
+kafkaBootstrap: sa-kafka-kafka-bootstrap.data:9092 # set by the module (KAFKA_BOOTSTRAP)
+
+# CFBD API key, synced from OCI Vault by External Secrets (modules/secrets).
+cfbdApiKeySecret:
+  name: cfbd-api-key
+  key: CFBD_API_KEY
+
+# Both images run as distroless "nonroot" (uid/gid 65532) and write nothing to disk.
+# fsGroup lets that user read the GCP key file (mode 0440, group 65532).
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
+
+extractor:
+  serviceAccountName: extractor # set by the module
+  # GCP key of sa-extractor (objectCreator + objectViewer on the landing bucket),
+  # synced by External Secrets; data key key.json, mounted at /var/secrets/gcp.
+  gcpKeySecret: gcp-key-extractor
+  schedule: "30 3 * * *"
+  timeZone: America/Denver
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  # Each retry spends CFBD quota, so one retry at most.
+  backoffLimit: 1
+  activeDeadlineSeconds: 3600
+  # Current season, calendar weeks overlapping the last 3 days (the open week and,
+  # until the Thursday after it ends, the previous one), re-landed every night because
+  # their games and plays still change. Nothing to do in the offseason.
+  args:
+    - --season=current
+    - --weeks=recent
+    - --force
+  goMemLimit: 200MiB
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+poller:
+  args: []
+  goMemLimit: 100MiB
+  terminationGracePeriodSeconds: 30
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+# One-off backfill Job, rendered by scripts/backfill.sh with enabled=true and applied
+# only when the owner runs that script. Never enabled in the release.
+backfill:
+  enabled: false
+  id: "" # Job name suffix, set by the script
+  seasons: "" # e.g. "2023,2024,2025" or "2023-2025"
+  extraArgs: [] # e.g. [--force]
+  activeDeadlineSeconds: 7200
+  ttlSecondsAfterFinished: 604800
