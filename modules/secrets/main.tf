@@ -2,15 +2,27 @@ locals {
   domain_prefix = (var.identity_domain_name != "" && lower(var.identity_domain_name) != "default") ? "'${var.identity_domain_name}'/" : ""
   reader_dg_ref = "${local.domain_prefix}${var.reader_dynamic_group_name}"
 
-  # Vault secret name = Kubernetes Secret name = gcp-key-<workload> (contract).
-  # The vault secrets themselves are written by scripts/mint-keys.sh, never by
-  # OpenTofu, so no key material reaches state.
+  # Vault secret name = Kubernetes Secret name (contract). The vault secrets
+  # themselves are written by scripts/mint-keys.sh (GCP keys) and
+  # scripts/put-secret.sh (the rest), never by OpenTofu, so no secret value
+  # reaches state.
   workload_secrets = [
     { name = "gcp-key-extractor", namespace = var.data_namespace },
     { name = "gcp-key-spark-drain", namespace = var.data_namespace },
     { name = "gcp-key-airflow", namespace = var.data_namespace },
     { name = "gcp-key-mcp-server", namespace = var.app_namespace },
   ]
+
+  # Every ExternalSecret: the GCP keys (data key key.json) plus the secrets of
+  # amendment G3. secretKey is the data key that receives the whole vault value.
+  external_secrets = concat(
+    [for s in local.workload_secrets : merge(s, { secretKey = "key.json", type = "Opaque" })],
+    [
+      { name = "cfbd-api-key", namespace = var.data_namespace, secretKey = "CFBD_API_KEY", type = "Opaque" },
+      { name = "telemetry-salt", namespace = var.app_namespace, secretKey = "TELEMETRY_SALT", type = "Opaque" },
+      { name = "ocir-pull", namespace = var.data_namespace, secretKey = ".dockerconfigjson", type = "kubernetes.io/dockerconfigjson" },
+    ],
+  )
 
   # Every External Secrets pod gets requests and limits; memory limits stay at
   # or below 128Mi.
@@ -104,8 +116,8 @@ resource "helm_release" "external_secrets" {
 }
 
 # 4. ClusterSecretStore (OCI Vault, instance principal) and one ExternalSecret
-#    per workload. Installed after the operator because they need its CRDs and
-#    validating webhook.
+#    per synced secret. Installed after the operator because they need its CRDs
+#    and validating webhook.
 resource "helm_release" "oci_vault_sync" {
   name       = "oci-vault-sync"
   chart      = "${path.module}/charts/oci-vault-sync"
@@ -117,9 +129,9 @@ resource "helm_release" "oci_vault_sync" {
       name       = var.cluster_secret_store_name
       region     = var.region
       vault      = oci_kms_vault.this.id
-      namespaces = distinct([for s in local.workload_secrets : s.namespace])
+      namespaces = distinct([for s in local.external_secrets : s.namespace])
     }
     refreshInterval = var.refresh_interval
-    externalSecrets = local.workload_secrets
+    externalSecrets = local.external_secrets
   })]
 }
