@@ -48,6 +48,12 @@ run "test_data_platform_module" {
     source = "./modules/data-platform"
   }
 
+  # tofu test loads production.auto.tfvars, which sets the live ingest tag. This run checks
+  # the module with ingest off; test_ingest_release covers it on.
+  variables {
+    ingest_image_tag = ""
+  }
+
   # Namespace
   assert {
     condition     = kubernetes_namespace_v1.data.metadata[0].name == "data"
