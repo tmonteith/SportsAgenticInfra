@@ -105,6 +105,22 @@ resource "oci_containerengine_cluster" "main" {
   }
 }
 
+# Availability domains the node pool may place nodes in. Block volumes are AD-local, so
+# pinning one AD keeps PVCs attachable when the node is replaced.
+locals {
+  placement_ads = [
+    for ad in data.oci_identity_availability_domains.ads.availability_domains : ad
+    if var.node_availability_domain == "" || endswith(ad.name, var.node_availability_domain)
+  ]
+}
+
+check "node_availability_domain_exists" {
+  assert {
+    condition     = var.node_availability_domain == "" || length(local.placement_ads) > 0
+    error_message = "No availability domain in this region ends with ${var.node_availability_domain}; the node pool would have no placement."
+  }
+}
+
 # 4. Single Worker Node Pool (Always Free ARM VM.Standard.A1.Flex: 1 node, 4 OCPUs, 24 GB RAM)
 resource "oci_containerengine_node_pool" "model" {
   cluster_id         = oci_containerengine_cluster.main.id
@@ -125,7 +141,7 @@ resource "oci_containerengine_node_pool" "model" {
 
   node_config_details {
     dynamic "placement_configs" {
-      for_each = data.oci_identity_availability_domains.ads.availability_domains
+      for_each = local.placement_ads
       content {
         availability_domain = placement_configs.value.name
         subnet_id           = var.nodes_subnet_id

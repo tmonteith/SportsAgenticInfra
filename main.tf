@@ -38,6 +38,7 @@ module "oke" {
   node_shape               = var.node_shape
   node_image_id            = var.node_image_id
   node_fault_domains       = var.node_fault_domains
+  node_availability_domain = var.node_availability_domain
   model_pool_size          = var.model_pool_size
   model_pool_ocpus         = var.model_pool_ocpus
   model_pool_memory_in_gbs = var.model_pool_memory_in_gbs
@@ -67,4 +68,34 @@ module "platform" {
   letsencrypt_email            = var.letsencrypt_email
 
   depends_on = [module.oke]
+}
+
+# 5. Data Platform Module (namespace data, Strimzi Kafka, Airflow, lakehouse OCIR repos)
+module "data_platform" {
+  source = "./modules/data-platform"
+
+  compartment_id = var.compartment_id
+  gcp_project_id = var.gcp_project_id
+
+  depends_on = [module.oke]
+}
+
+# 6. Secrets Module (OCI Vault, External Secrets Operator, GCP key ExternalSecrets)
+module "secrets" {
+  source = "./modules/secrets"
+
+  tenancy_ocid         = var.tenancy_ocid
+  compartment_id       = var.compartment_id
+  compartment_name     = var.compartment_name
+  identity_domain_name = var.identity_domain_name
+  prefix               = var.prefix
+  region               = var.region
+
+  # Every worker node in the compartment. The MCP services group matches no node:
+  # its rule needs node_pool = 'services' and the only pool is tagged 'model'.
+  reader_dynamic_group_name = module.iam.oke_nodes_dynamic_group_name
+
+  # Module outputs, so the namespaces exist before the ExternalSecrets in them.
+  app_namespace  = module.platform.app_namespace
+  data_namespace = module.data_platform.namespace
 }

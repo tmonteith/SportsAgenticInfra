@@ -1,0 +1,87 @@
+# Kafka for the lakehouse: one KRaft node that is both controller and broker.
+# Bootstrap address (shared contract): sa-kafka-kafka-bootstrap.data:9092
+#
+# modules/data-platform passes this file to helm_release.kafka and checks the heap,
+# memory limit, volume size and listeners before planning.
+
+clusterName: sa-kafka
+
+kafka:
+  # Default Kafka version of Strimzi 1.3.1 (image quay.io/strimzi/kafka:1.3.1-kafka-4.3.2).
+  version: 4.3.2
+  metadataVersion: 4.3-IV0
+  # One plaintext listener, cluster-internal only (ClusterIP bootstrap service).
+  listeners:
+    - name: plain
+      port: 9092
+      type: internal
+      tls: false
+  config:
+    # Single node: every replication setting is 1.
+    offsets.topic.replication.factor: 1
+    transaction.state.log.replication.factor: 1
+    transaction.state.log.min.isr: 1
+    default.replication.factor: 1
+    min.insync.replicas: 1
+    num.partitions: 1
+    # Topics exist only as KafkaTopic resources below; producers cannot create others.
+    auto.create.topics.enable: false
+    # Broker-wide caps so no topic can fill the 50Gi volume: 7 days or 10 GiB per
+    # partition, whichever comes first, deleted in 256 MiB segments.
+    log.retention.hours: 168
+    log.retention.bytes: "10737418240"
+    log.segment.bytes: "268435456"
+    log.retention.check.interval.ms: "300000"
+
+nodePool:
+  name: dual-role
+  replicas: 1
+  # Heap capped at 768 MiB (plan: JVM heap <= 768 MB). The rest of the 1.25 GiB limit
+  # covers metaspace, direct buffers and thread stacks.
+  heap: 768m
+  # Requests equal limits for memory so the broker is the last pod evicted under
+  # memory pressure.
+  resources:
+    requests:
+      cpu: 150m
+      memory: 1280Mi
+    limits:
+      cpu: 1000m
+      memory: 1280Mi
+
+storage:
+  # OCI's smallest block volume. KRaft metadata shares the volume.
+  size: 50Gi
+  class: oci-bv
+  deleteClaim: false
+
+entityOperator:
+  # Topic operator only; no user operator (no Kafka users or ACLs).
+  topicOperator:
+    resources:
+      requests:
+        cpu: 25m
+        memory: 256Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+
+# Shared contract: 1 partition, 7 days. Kubernetes object names cannot contain "_",
+# so the object name differs from the Kafka topic name where needed.
+topics:
+  - name: cfb-live-games
+    topicName: cfb.live_games
+    partitions: 1
+    replicas: 1
+  - name: agent.events
+    topicName: agent.events
+    partitions: 1
+    replicas: 1
+
+# Applied to every topic above. Large numbers are quoted so Helm does not render them
+# in scientific notation.
+topicConfig:
+  cleanup.policy: delete
+  retention.ms: "604800000"
+  retention.bytes: "10737418240"
+  segment.bytes: "268435456"

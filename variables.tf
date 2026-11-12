@@ -159,3 +159,19 @@ variable "letsencrypt_email" {
   type        = string
   default     = "admin@sportsagentic.dev"
 }
+
+variable "gcp_project_id" {
+  description = "GCP project ID of the lakehouse. Passed to the data platform as GCP_PROJECT."
+  type        = string
+}
+
+variable "node_availability_domain" {
+  description = "Optional availability domain suffix to pin worker nodes to (AD-1, AD-2 or AD-3). Block volumes are AD-local, so pinning keeps PVCs attachable when the node is replaced. Empty places nodes in every AD."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.node_availability_domain == "" || can(regex("^AD-[1-3]$", var.node_availability_domain))
+    error_message = "node_availability_domain must be empty or one of AD-1, AD-2, AD-3."
+  }
+}

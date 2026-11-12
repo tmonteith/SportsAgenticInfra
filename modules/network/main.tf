@@ -253,6 +253,14 @@ resource "oci_core_security_list" "lb" {
     "Project"   = "SportsAgentic"
     "ManagedBy" = "OpenTofu"
   }
+
+  # OKE's cloud controller adds rules here for every LoadBalancer Service (ingress-nginx's
+  # NodePorts and the kube-proxy health check on 10256). Removing them breaks the load
+  # balancer's health checks, so OpenTofu must not revert them. To change the rules above,
+  # drop this block for one reviewed apply and keep the controller's rules.
+  lifecycle {
+    ignore_changes = [ingress_security_rules, egress_security_rules]
+  }
 }
 
 # C. Private Worker Nodes Security List
@@ -338,6 +346,12 @@ resource "oci_core_security_list" "nodes" {
   freeform_tags = {
     "Project"   = "SportsAgentic"
     "ManagedBy" = "OpenTofu"
+  }
+
+  # Same as the load balancer list: the cloud controller adds ingress rules from the LB
+  # subnet for each LoadBalancer Service, and OpenTofu must not remove them.
+  lifecycle {
+    ignore_changes = [ingress_security_rules, egress_security_rules]
   }
 }
 
