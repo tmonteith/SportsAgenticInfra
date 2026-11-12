@@ -121,6 +121,13 @@ resource "oci_identity_policy" "ci_policy" {
     "Allow group ${local.group_ref} to read compartments in tenancy",
     "Allow group ${local.group_ref} to inspect tenancies in tenancy",
 
+    # Read-only access to tenancy-level policies, so plan/refresh can see the
+    # OKE node, NoSQL MCP and Vault secrets-read policies the root stack keeps in
+    # the tenancy. Without it, refresh gets NotAuthorizedOrNotFound and every CI
+    # plan says those policies "will be created". INSPECT gives POLICY_READ
+    # (ListPolicies, GetPolicy including statements); it cannot create or change them.
+    "Allow group ${local.group_ref} to inspect policies in tenancy",
+
     # Dynamic group management (needed for OKE worker nodes & cluster registration)
     "Allow group ${local.group_ref} to manage dynamic-groups in tenancy"
   ]
