@@ -231,7 +231,7 @@ Today the node and the only volume (`llama-server-models`) are both in `US-CHICA
 
 ## 8. Ingest: extractor and poller
 
-The CFBD extractor and the game-day poller (Go, built from the SportsAgentic repo's `cmd/extractor` and `cmd/poller`) run from the local chart `k8s/data/ingest`, installed by `helm_release.ingest` (release `ingest`, namespace `data`). The release exists only when the root variable `ingest_image_tag` is non-empty (default `""`), so plans before the images exist change nothing.
+The CFBD extractor and the game-day poller (Go, built from the SportsAgenticLakehouse repo's `ingest/cmd/extractor` and `ingest/cmd/poller`) run from the local chart `k8s/data/ingest`, installed by `helm_release.ingest` (release `ingest`, namespace `data`). The release exists only when the root variable `ingest_image_tag` is non-empty (default `""`), so plans before the images exist change nothing.
 
 | Object | What it does | Requests / limits |
 | --- | --- | --- |

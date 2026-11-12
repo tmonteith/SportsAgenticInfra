@@ -177,7 +177,7 @@ variable "node_availability_domain" {
 }
 
 variable "ingest_image_tag" {
-  description = "Tag of the lakehouse extractor and poller images in OCIR (the short commit SHA the SportsAgentic image workflow pushed). Empty (the default) leaves the ingest release uninstalled."
+  description = "Tag of the lakehouse extractor and poller images in OCIR (the short commit SHA the SportsAgenticLakehouse ingest-images workflow pushed). Empty (the default) leaves the ingest release uninstalled."
   type        = string
   default     = ""
 }
