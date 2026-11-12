@@ -70,12 +70,16 @@ module "platform" {
   depends_on = [module.oke]
 }
 
-# 5. Data Platform Module (namespace data, Strimzi Kafka, Airflow, lakehouse OCIR repos)
+# 5. Data Platform Module (namespace data, Strimzi Kafka, Airflow, lakehouse OCIR repos, ingest)
 module "data_platform" {
   source = "./modules/data-platform"
 
   compartment_id = var.compartment_id
   gcp_project_id = var.gcp_project_id
+
+  # Extractor and poller (k8s/data/ingest), installed once their images are pushed.
+  ingest_image_tag = var.ingest_image_tag
+  ocir_namespace   = data.oci_objectstorage_namespace.ns.namespace
 
   depends_on = [module.oke]
 }

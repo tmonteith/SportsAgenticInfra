@@ -65,3 +65,26 @@ variable "airflow_dags_sub_path" {
   type        = string
   default     = "dags"
 }
+
+variable "ingest_image_tag" {
+  description = "Tag of the sportsagentic/extractor and sportsagentic/poller images (both built from the same commit). Empty (the default) installs nothing, so plans before the images exist change nothing."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.ingest_image_tag == "" || can(regex("^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$", var.ingest_image_tag))
+    error_message = "ingest_image_tag must be empty or a valid image tag (letters, digits, '_', '.', '-'; at most 128 characters)."
+  }
+}
+
+variable "ocir_registry" {
+  description = "OCIR registry host the lakehouse images are pulled from."
+  type        = string
+  default     = "ord.ocir.io"
+}
+
+variable "ocir_namespace" {
+  description = "OCIR tenancy namespace of the lakehouse images (the tenancy's Object Storage namespace). Required when ingest_image_tag is set."
+  type        = string
+  default     = ""
+}

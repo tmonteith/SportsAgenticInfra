@@ -195,6 +195,119 @@ run "test_data_platform_module" {
     condition     = yamldecode(helm_release.airflow.values[0]).postgresql.primary.persistence.size == "50Gi"
     error_message = "Airflow Postgres volume must be 50Gi"
   }
+
+  # Ingest stays uninstalled until an image tag is set.
+  assert {
+    condition     = length(helm_release.ingest) == 0 && output.ingest_release == null && length(output.ingest_images) == 0
+    error_message = "The ingest release must not be installed while ingest_image_tag is empty"
+  }
+}
+
+run "test_ingest_release" {
+  command = plan
+
+  module {
+    source = "./modules/data-platform"
+  }
+
+  variables {
+    ingest_image_tag = "1234567"
+    ocir_namespace   = "axtestnamespace"
+  }
+
+  assert {
+    condition     = helm_release.ingest[0].name == "ingest" && helm_release.ingest[0].namespace == "data" && endswith(helm_release.ingest[0].chart, "k8s/data/ingest")
+    error_message = "Ingest must be the local chart k8s/data/ingest, release ingest in namespace data"
+  }
+
+  # Image: ord.ocir.io/<tenancy-namespace>/sportsagentic/<name>:<tag>; a digits-only tag stays a string.
+  assert {
+    condition = (
+      yamldecode(helm_release.ingest[0].values[1]).image.registry == "ord.ocir.io" &&
+      yamldecode(helm_release.ingest[0].values[1]).image.namespace == "axtestnamespace" &&
+      yamldecode(helm_release.ingest[0].values[1]).image.tag == "1234567" &&
+      output.ingest_images.poller == "ord.ocir.io/axtestnamespace/sportsagentic/poller:1234567" &&
+      output.ingest_images.extractor == "ord.ocir.io/axtestnamespace/sportsagentic/extractor:1234567"
+    )
+    error_message = "Ingest images must be ord.ocir.io/<namespace>/sportsagentic/{extractor,poller}:<ingest_image_tag>"
+  }
+
+  # Shared-contract env and secrets.
+  assert {
+    condition = (
+      yamldecode(helm_release.ingest[0].values[1]).gcpProject == "sports-agent-test" &&
+      yamldecode(helm_release.ingest[0].values[1]).kafkaBootstrap == "sa-kafka-kafka-bootstrap.data:9092" &&
+      yamldecode(helm_release.ingest[0].values[0]).cfbdApiKeySecret.name == "cfbd-api-key" &&
+      yamldecode(helm_release.ingest[0].values[0]).cfbdApiKeySecret.key == "CFBD_API_KEY" &&
+      yamldecode(helm_release.ingest[0].values[0]).extractor.gcpKeySecret == "gcp-key-extractor" &&
+      yamldecode(helm_release.ingest[0].values[1]).extractor.serviceAccountName == "extractor" &&
+      yamldecode(helm_release.ingest[0].values[1]).imagePullSecrets == [{ name = "ocir-pull" }]
+    )
+    error_message = "Ingest must use GCP_PROJECT, KAFKA_BOOTSTRAP, Secrets cfbd-api-key and gcp-key-extractor, SA extractor and pull secret ocir-pull"
+  }
+
+  assert {
+    condition = (
+      yamldecode(helm_release.ingest[0].values[0]).extractor.schedule == "30 3 * * *" &&
+      yamldecode(helm_release.ingest[0].values[0]).extractor.timeZone == "America/Denver" &&
+      yamldecode(helm_release.ingest[0].values[0]).extractor.concurrencyPolicy == "Forbid"
+    )
+    error_message = "extractor-nightly must run at 03:30 America/Denver with concurrencyPolicy Forbid"
+  }
+
+  # Resource budget: poller <= 10m / 32Mi requests, 128Mi limit; extractor <= 50m / 128Mi, 256Mi.
+  assert {
+    condition = (
+      output.ingest_resources.poller.cpu_request_m <= 10 &&
+      output.ingest_resources.poller.memory_request_mib <= 32 &&
+      output.ingest_resources.poller.memory_limit_mib <= 128 &&
+      output.ingest_resources.extractor.cpu_request_m <= 50 &&
+      output.ingest_resources.extractor.memory_request_mib <= 128 &&
+      output.ingest_resources.extractor.memory_limit_mib <= 256 &&
+      output.ingest_resources.poller.cpu_limit_m != null &&
+      output.ingest_resources.extractor.cpu_limit_m != null
+    )
+    error_message = "Ingest containers must set requests and limits within the Phase 2 budget"
+  }
+
+  assert {
+    condition = (
+      yamldecode(helm_release.ingest[0].values[0]).podSecurityContext.runAsNonRoot &&
+      yamldecode(helm_release.ingest[0].values[0]).containerSecurityContext.readOnlyRootFilesystem &&
+      !yamldecode(helm_release.ingest[0].values[0]).containerSecurityContext.allowPrivilegeEscalation &&
+      !yamldecode(helm_release.ingest[0].values[0]).backfill.enabled
+    )
+    error_message = "Ingest pods must run as non-root with a read-only root filesystem, and the backfill Job must not be part of the release"
+  }
+}
+
+run "test_ingest_rejects_bad_tag" {
+  command = plan
+
+  module {
+    source = "./modules/data-platform"
+  }
+
+  variables {
+    ingest_image_tag = "latest; rm -rf"
+    ocir_namespace   = "axtestnamespace"
+  }
+
+  expect_failures = [var.ingest_image_tag]
+}
+
+run "test_ingest_needs_ocir_namespace" {
+  command = plan
+
+  module {
+    source = "./modules/data-platform"
+  }
+
+  variables {
+    ingest_image_tag = "abc1234"
+  }
+
+  expect_failures = [helm_release.ingest]
 }
 
 # The committed production sizing: one E5.Flex node, 1 OCPU, memory raised for the data
