@@ -23,9 +23,15 @@ quiet: true
 # - CKV2_OCI_6: Ensure Kubernetes Engine Cluster pod security policy is enforced.
 #   Reason: PodSecurityPolicy was removed in Kubernetes 1.25 and the cluster runs v1.34, so OKE cannot enable the PSP admission controller.
 #   Pod Security Admission (namespace labels) is the replacement.
+# - CKV_GCP_26: Ensure that VPC Flow Logs is enabled for every subnet in a VPC Network.
+#   Reason: the only GCP subnet is sa-dataproc (gcp/), which carries short Serverless Spark batches that talk only to
+#   Google APIs through Private Google Access (no NAT, no external IPs). Flow logs are billed through Cloud Logging,
+#   and the lakehouse runs under a $20/month budget with no approved always-on logging cost. Cloud Audit Logs and the
+#   Dataproc batch logs cover what the batches do.
 skip-check:
   - CKV_OCI_9
   - CKV_OCI_17
   - CKV2_OCI_3
   - CKV2_OCI_5
   - CKV2_OCI_6
+  - CKV_GCP_26
