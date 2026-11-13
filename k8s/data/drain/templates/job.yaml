@@ -1,0 +1,18 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: spark-drain-{{ required "drain.id is required" .Values.drain.id }}
+  labels:
+    {{- include "drain.labels" . | nindent 4 }}
+    sportsagentic.dev/run: once
+spec:
+  backoffLimit: {{ .Values.drain.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.drain.activeDeadlineSeconds }}
+  ttlSecondsAfterFinished: {{ .Values.drain.ttlSecondsAfterFinished }}
+  template:
+    metadata:
+      labels:
+        {{- include "drain.labels" . | nindent 8 }}
+        sportsagentic.dev/run: once
+    spec:
+      {{- include "drain.podSpec" . | nindent 6 }}

@@ -1,0 +1,5 @@
+apiVersion: v2
+name: drain
+description: Lakehouse streaming drain for SportsAgentic - one-off Spark Job draining Kafka into bronze and silver Iceberg tables
+type: application
+version: 0.1.0
