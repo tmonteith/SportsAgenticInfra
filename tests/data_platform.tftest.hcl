@@ -363,3 +363,59 @@ run "test_production_node_sizing" {
     error_message = "Production node pool must be pinned to AD-3, where its block volumes live"
   }
 }
+
+run "test_airflow_drain_image" {
+  command = plan
+
+  module {
+    source = "./modules/data-platform"
+  }
+
+  variables {
+    drain_image_tag = "a9a37da"
+    ocir_namespace  = "axtestnamespace"
+  }
+
+  assert {
+    condition = contains(
+      [for e in yamldecode(helm_release.airflow.values[1]).env : e.value if e.name == "AIRFLOW_VAR_SPARK_DRAIN_IMAGE"],
+      "ord.ocir.io/axtestnamespace/sportsagentic/spark-drain:a9a37da"
+    )
+    error_message = "Airflow must get AIRFLOW_VAR_SPARK_DRAIN_IMAGE with the full spark-drain image reference"
+  }
+}
+
+run "test_airflow_no_drain_image_by_default" {
+  command = plan
+
+  module {
+    source = "./modules/data-platform"
+  }
+
+  variables {
+    ingest_image_tag = ""
+    drain_image_tag  = ""
+    ocir_namespace   = ""
+  }
+
+  assert {
+    condition     = length([for e in yamldecode(helm_release.airflow.values[1]).env : e if e.name == "AIRFLOW_VAR_SPARK_DRAIN_IMAGE"]) == 0
+    error_message = "Without drain_image_tag, Airflow must not get AIRFLOW_VAR_SPARK_DRAIN_IMAGE"
+  }
+}
+
+run "test_drain_image_rejects_bad_tag" {
+  command = plan
+
+  module {
+    source = "./modules/data-platform"
+  }
+
+  variables {
+    ingest_image_tag = ""
+    drain_image_tag  = "bad tag"
+    ocir_namespace   = "axtestnamespace"
+  }
+
+  expect_failures = [var.drain_image_tag]
+}
