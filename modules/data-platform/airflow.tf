@@ -80,6 +80,9 @@ locals {
       { name = "GCP_PROJECT", value = var.gcp_project_id },
       { name = "ICEBERG_CATALOG", value = local.iceberg_catalog },
       { name = "KAFKA_BOOTSTRAP", value = local.kafka_bootstrap },
+      # The Google provider's hooks need a google_cloud_default connection to exist. This one
+      # holds no credentials: the hooks fall back to ADC, i.e. GOOGLE_APPLICATION_CREDENTIALS.
+      { name = "AIRFLOW_CONN_GOOGLE_CLOUD_DEFAULT", value = "google-cloud-platform://" },
     ], local.airflow_drain_env)
 
     # Key Secret synced by External Secrets (WS1). Optional, so pods start before it exists.

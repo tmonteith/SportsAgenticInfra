@@ -39,6 +39,8 @@ mock_provider "helm" {}
 variables {
   compartment_id = "ocid1.compartment.oc1..test"
   gcp_project_id = "sports-agent-test"
+  # production.auto.tfvars sets a real tag; runs that need one set it themselves.
+  drain_image_tag = ""
 }
 
 run "test_data_platform_module" {
@@ -401,6 +403,11 @@ run "test_airflow_no_drain_image_by_default" {
   assert {
     condition     = length([for e in yamldecode(helm_release.airflow.values[1]).env : e if e.name == "AIRFLOW_VAR_SPARK_DRAIN_IMAGE"]) == 0
     error_message = "Without drain_image_tag, Airflow must not get AIRFLOW_VAR_SPARK_DRAIN_IMAGE"
+  }
+
+  assert {
+    condition     = contains([for e in yamldecode(helm_release.airflow.values[1]).env : e.value if e.name == "AIRFLOW_CONN_GOOGLE_CLOUD_DEFAULT"], "google-cloud-platform://")
+    error_message = "Airflow must define a credential-free google_cloud_default connection (the hooks use ADC)"
   }
 }
 
