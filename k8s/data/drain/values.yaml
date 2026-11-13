@@ -1,0 +1,66 @@
+# Lakehouse streaming drain (plan WS4b, contract H8): one local-mode Spark Job in namespace
+# data that drains cfb.live_games and agent.events into bronze and silver
+# (trigger availableNow) and exits.
+#
+# Not installed as a release. scripts/drain-once.sh renders templates/job.yaml with the
+# installed "ingest" release's values (image registry and namespace, gcpProject,
+# kafkaBootstrap, imagePullSecrets) plus the drain image tag and a Job id, and creates it.
+# Phase 4 (WS7) reuses the same pod spec ("drain.podSpec") in a KubernetesPodOperator.
+
+image:
+  # ord.ocir.io/<tenancy-namespace>/sportsagentic/spark-drain:<tag>
+  registry: ord.ocir.io
+  namespace: "" # OCIR tenancy namespace
+  tag: "" # short commit SHA pushed by the Lakehouse repo's drain-image.yml
+  pullPolicy: IfNotPresent
+
+# Synced into namespace data by External Secrets (modules/secrets).
+imagePullSecrets:
+  - name: ocir-pull
+
+gcpProject: "" # GCP_PROJECT
+kafkaBootstrap: sa-kafka-kafka-bootstrap.data:9092 # KAFKA_BOOTSTRAP
+icebergCatalog: sa_catalog # ICEBERG_CATALOG
+
+drain:
+  id: "" # Job name suffix (spark-drain-<id>), set by the script
+  # Created by modules/data-platform (automount disabled there too).
+  serviceAccountName: spark-drain
+  # GCP key of sa-spark-drain (objectAdmin on the warehouse bucket, BigLake editor on
+  # bronze and silver), synced by External Secrets; data key key.json, mounted at
+  # /var/secrets/gcp.
+  gcpKeySecret: gcp-key-spark-drain
+  # drain.py arguments, e.g. [--streams, agent_events]. Default: both streams, one after
+  # the other.
+  args: []
+  # Optional KNOWN_TOOLS override (comma list of MCP tool names); empty = the built-in list.
+  knownTools: ""
+  # SPARK_DRIVER_MEMORY (JVM heap of the local[2] driver), inside the 2Gi limit.
+  driverMemory: 1400m
+  # Reruns are safe (bronze appends are deduplicated by offset, silver merges are idempotent).
+  backoffLimit: 1
+  activeDeadlineSeconds: 3600
+  ttlSecondsAfterFinished: 604800
+  # Spark scratch space (spark.local.dir, JVM temp files); the root filesystem is read-only.
+  tmpSizeLimit: 2Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 2Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  # The image runs as the apache/spark image's "spark" user (uid/gid 185). fsGroup lets it
+  # read the GCP key file (mode 0440, group 185).
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 185
+    runAsGroup: 185
+    fsGroup: 185
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: [ALL]
