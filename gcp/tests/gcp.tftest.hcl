@@ -131,3 +131,42 @@ run "test_gcp_stack" {
     error_message = "Budget must be scoped to the project"
   }
 }
+
+run "test_dataproc_network" {
+  command = plan
+
+  assert {
+    condition     = google_compute_network.lakehouse.name == "sa-lakehouse" && !google_compute_network.lakehouse.auto_create_subnetworks
+    error_message = "Serverless Spark needs the custom-mode VPC sa-lakehouse"
+  }
+
+  assert {
+    condition = (
+      google_compute_subnetwork.dataproc.name == "sa-dataproc" &&
+      google_compute_subnetwork.dataproc.region == "us-central1" &&
+      google_compute_subnetwork.dataproc.ip_cidr_range == "10.20.0.0/24" &&
+      google_compute_subnetwork.dataproc.private_ip_google_access
+    )
+    error_message = "Subnet sa-dataproc must be 10.20.0.0/24 in us-central1 with Private Google Access"
+  }
+
+  assert {
+    condition = (
+      google_compute_firewall.lakehouse_internal.name == "sa-lakehouse-internal" &&
+      google_compute_firewall.lakehouse_internal.direction == "INGRESS" &&
+      google_compute_firewall.lakehouse_internal.source_ranges == toset(["10.20.0.0/24"]) &&
+      one([for a in google_compute_firewall.lakehouse_internal.allow : a.protocol]) == "all"
+    )
+    error_message = "Firewall sa-lakehouse-internal must allow all traffic from the subnet and nothing else"
+  }
+
+  assert {
+    condition     = contains([for s in google_project_service.this : s.service], "compute.googleapis.com")
+    error_message = "The Compute Engine API owns the network and must be managed"
+  }
+
+  assert {
+    condition     = output.dataproc_subnet == "sa-dataproc"
+    error_message = "Batches pass the subnet name from the dataproc_subnet output"
+  }
+}

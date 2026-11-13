@@ -47,7 +47,8 @@ user credentials, the BigLake Iceberg IAM resources and the billing budget retur
 
 The stack enables Storage, BigLake, BigQuery, Dataproc, IAM and Billing Budgets, plus Cloud
 Monitoring (`monitoring.googleapis.com`), which owns the email notification channel the budget
-alerts go to. The bootstrap script enables what must exist before the first plan: Service Usage,
+alerts go to, and Compute Engine, which owns the Serverless Spark network. Dataproc had already
+turned Compute Engine on, so managing it changes nothing in the project. The bootstrap script enables what must exist before the first plan: Service Usage,
 Cloud Resource Manager, Cloud Billing (the stack looks up the billing account by display name)
 and Storage. APIs are never disabled on destroy.
 
@@ -76,6 +77,15 @@ Spark clients (Iceberg 1.10 or later) use:
 If a client sends `header.x-goog-user-project`, its identity also needs
 `serviceusage.services.use` on the project. Without the header, a service account key bills its
 own project, which is this one.
+
+## Serverless Spark network
+
+Batches run in the custom-mode VPC `sa-lakehouse`, subnet `sa-dataproc` (`10.20.0.0/24`,
+us-central1), not in the `default` VPC. The subnet has Private Google Access, so batches reach
+GCS and BigLake with internal IPs only. The firewall rule `sa-lakehouse-internal` allows all
+traffic inside the subnet, which Serverless needs between its driver and executors. There is no
+NAT and no external IP, so batches cannot reach the internet: the Iceberg jars come from the jobs
+bucket. VPCs, subnets and firewall rules are free. `submit-batch.sh` passes `--subnet sa-dataproc`.
 
 ## Access (least privilege)
 
@@ -120,13 +130,10 @@ cd gcp && tofu init -backend=false && tofu test
 ## Outputs
 
 `bucket_names`, `catalog_name`, `iceberg_namespaces`, `iceberg_rest_catalog_uri`,
-`iceberg_warehouse`, `service_account_emails`, `billing_budget_name`.
+`iceberg_warehouse`, `service_account_emails`, `billing_budget_name`, `dataproc_subnet`.
 
 ## Not managed here
 
-- **Serverless Spark networking.** Batches run in the `default` VPC unless told otherwise, and
-  their subnet in `us-central1` needs Private Google Access. Enable it once, or give the batches
-  another subnet: `gcloud compute networks subnets update default --region=us-central1 --enable-private-ip-google-access`.
 - **Keys.** See [docs/secrets.md](../docs/secrets.md).
 
 ## Teardown
