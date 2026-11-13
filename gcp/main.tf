@@ -60,12 +60,19 @@ locals {
   # Budget alerts at $5, $10 and $20 (contract). The budget amount is the
   # highest threshold; each alert is expressed as a fraction of it.
   budget_alerts_usd = [5, 10, 20]
-  budget_amount_usd = max(local.budget_alerts_usd...)
+
+  # Serverless for Apache Spark network (amendment H10). Batches get internal
+  # IPs only and reach Google APIs (GCS, BigLake) through Private Google Access.
+  dataproc_subnet_cidr = "10.20.0.0/24"
+  budget_amount_usd    = max(local.budget_alerts_usd...)
 
   # Storage, BigLake, BigQuery, Dataproc, IAM and Billing Budgets per the plan,
   # plus Cloud Monitoring, which owns the email notification channel the
-  # budget sends its alerts to.
+  # budget sends its alerts to, and Compute Engine, which owns the Serverless
+  # Spark network below (Dataproc already turned it on; managing it here makes
+  # that dependency explicit).
   services = toset([
+    "compute.googleapis.com",
     "storage.googleapis.com",
     "biglake.googleapis.com",
     "bigquery.googleapis.com",
@@ -298,4 +305,43 @@ resource "google_billing_budget" "lakehouse" {
   }
 
   depends_on = [google_project_service.this]
+}
+
+# 8. Serverless for Apache Spark network (amendment H10)
+# A dedicated VPC instead of the default one, so batches get a subnet with
+# Private Google Access and the open intra-subnet traffic Serverless needs,
+# without changing the project's default network. No NAT and no external IPs:
+# batches only talk to Google APIs, and jars come from the jobs bucket. VPCs,
+# subnets and firewall rules carry no charge.
+resource "google_compute_network" "lakehouse" {
+  project                 = var.project_id
+  name                    = "sa-lakehouse"
+  description             = "SportsAgentic lakehouse: Serverless for Apache Spark batches"
+  auto_create_subnetworks = false
+  routing_mode            = "REGIONAL"
+
+  depends_on = [google_project_service.this]
+}
+
+resource "google_compute_subnetwork" "dataproc" {
+  project                  = var.project_id
+  name                     = "sa-dataproc"
+  region                   = var.region
+  network                  = google_compute_network.lakehouse.id
+  ip_cidr_range            = local.dataproc_subnet_cidr
+  private_ip_google_access = true
+}
+
+# Serverless Spark drivers and executors must reach each other on every port.
+resource "google_compute_firewall" "lakehouse_internal" {
+  project       = var.project_id
+  name          = "sa-lakehouse-internal"
+  network       = google_compute_network.lakehouse.id
+  description   = "Serverless Spark: all traffic between hosts in sa-dataproc"
+  direction     = "INGRESS"
+  source_ranges = [local.dataproc_subnet_cidr]
+
+  allow {
+    protocol = "all"
+  }
 }

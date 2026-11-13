@@ -32,3 +32,8 @@ output "billing_budget_name" {
   description = "Resource name of the lakehouse billing budget."
   value       = google_billing_budget.lakehouse.name
 }
+
+output "dataproc_subnet" {
+  description = "Subnet name Serverless Spark batches pass as --subnet."
+  value       = google_compute_subnetwork.dataproc.name
+}
