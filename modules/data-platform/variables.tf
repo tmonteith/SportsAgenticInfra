@@ -77,6 +77,17 @@ variable "ingest_image_tag" {
   }
 }
 
+variable "drain_image_tag" {
+  description = "Tag of the sportsagentic/spark-drain image. When set, every Airflow container gets AIRFLOW_VAR_SPARK_DRAIN_IMAGE (Airflow Variable spark_drain_image), the full image reference the stream_drain DAG runs. Empty (the default) leaves it unset."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.drain_image_tag == "" || can(regex("^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$", var.drain_image_tag))
+    error_message = "drain_image_tag must be empty or a valid image tag (letters, digits, '_', '.', '-'; at most 128 characters)."
+  }
+}
+
 variable "ocir_registry" {
   description = "OCIR registry host the lakehouse images are pulled from."
   type        = string
@@ -84,7 +95,7 @@ variable "ocir_registry" {
 }
 
 variable "ocir_namespace" {
-  description = "OCIR tenancy namespace of the lakehouse images (the tenancy's Object Storage namespace). Required when ingest_image_tag is set."
+  description = "OCIR tenancy namespace of the lakehouse images (the tenancy's Object Storage namespace). Required when ingest_image_tag or drain_image_tag is set."
   type        = string
   default     = ""
 }

@@ -60,6 +60,9 @@ extractor:
     - --season=current
     - --weeks=recent
     - --force
+    # Writes _markers/extractor-nightly/<Denver date>.json after a successful run; Airflow's
+    # cfb_nightly DAG waits for it. Needs an extractor image with this flag (Lakehouse WS7).
+    - --completion-marker=extractor-nightly
   goMemLimit: 200MiB
   resources:
     requests:

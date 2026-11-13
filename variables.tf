@@ -176,6 +176,12 @@ variable "node_availability_domain" {
   }
 }
 
+variable "drain_image_tag" {
+  description = "Tag of the sportsagentic/spark-drain image (the short commit SHA the SportsAgenticLakehouse drain-image workflow pushed). Sets Airflow Variable spark_drain_image for the stream_drain DAG. Empty (the default) leaves it unset."
+  type        = string
+  default     = ""
+}
+
 variable "ingest_image_tag" {
   description = "Tag of the lakehouse extractor and poller images in OCIR (the short commit SHA the SportsAgenticLakehouse ingest-images workflow pushed). Empty (the default) leaves the ingest release uninstalled."
   type        = string

@@ -26,6 +26,12 @@ locals {
   }
   airflow_memory_limit_total_mib = sum(values(local.airflow_memory_limits_mib))
 
+  # Airflow Variable spark_drain_image (read by the stream_drain DAG), only once the image exists.
+  spark_drain_image = "${var.ocir_registry}/${var.ocir_namespace}/sportsagentic/spark-drain:${var.drain_image_tag}"
+  airflow_drain_env = var.drain_image_tag == "" ? [] : [
+    { name = "AIRFLOW_VAR_SPARK_DRAIN_IMAGE", value = local.spark_drain_image },
+  ]
+
   airflow_service_account = kubernetes_service_account_v1.workload["airflow"].metadata[0].name
   airflow_sa_values = {
     serviceAccount = {
@@ -69,12 +75,15 @@ locals {
     triggerer          = local.airflow_sa_values
 
     # Shared contract env vars for every Airflow container (and so every task).
-    env = [
+    env = concat([
       { name = "GOOGLE_APPLICATION_CREDENTIALS", value = local.gcp_key_file },
       { name = "GCP_PROJECT", value = var.gcp_project_id },
       { name = "ICEBERG_CATALOG", value = local.iceberg_catalog },
       { name = "KAFKA_BOOTSTRAP", value = local.kafka_bootstrap },
-    ]
+      # The Google provider's hooks need a google_cloud_default connection to exist. This one
+      # holds no credentials: the hooks fall back to ADC, i.e. GOOGLE_APPLICATION_CREDENTIALS.
+      { name = "AIRFLOW_CONN_GOOGLE_CLOUD_DEFAULT", value = "google-cloud-platform://" },
+    ], local.airflow_drain_env)
 
     # Key Secret synced by External Secrets (WS1). Optional, so pods start before it exists.
     volumes = [
@@ -123,6 +132,10 @@ resource "helm_release" "airflow" {
   depends_on = [kubernetes_role_binding_v1.airflow_pod_launcher]
 
   lifecycle {
+    precondition {
+      condition     = var.drain_image_tag == "" || var.ocir_namespace != ""
+      error_message = "ocir_namespace (the OCIR tenancy namespace) must be set when drain_image_tag is set."
+    }
     precondition {
       condition     = local.airflow_memory_limit_total_mib <= 3072
       error_message = "The sum of Airflow memory limits (Postgres, sidecars and the migration job included) must be at most 3 GiB."

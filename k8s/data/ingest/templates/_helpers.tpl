@@ -49,6 +49,8 @@ containers:
         value: /var/secrets/gcp/key.json
       - name: GOMEMLIMIT
         value: {{ $v.extractor.goMemLimit | quote }}
+      - name: IMAGE_TAG
+        value: {{ $v.image.tag | quote }}
     resources:
       {{- toYaml $v.extractor.resources | nindent 6 }}
     securityContext:

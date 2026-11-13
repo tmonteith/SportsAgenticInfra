@@ -81,6 +81,9 @@ module "data_platform" {
   ingest_image_tag = var.ingest_image_tag
   ocir_namespace   = data.oci_objectstorage_namespace.ns.namespace
 
+  # Drain image for Airflow's stream_drain DAG (Airflow Variable spark_drain_image).
+  drain_image_tag = var.drain_image_tag
+
   depends_on = [module.oke]
 }
 

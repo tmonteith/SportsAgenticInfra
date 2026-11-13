@@ -9,7 +9,10 @@ compartment_name = "sportsagentic-1"
 
 # Lakehouse extractor and poller images in OCIR: the short SHA of the SportsAgenticLakehouse
 # commit whose ingest-images workflow pushed them. "" uninstalls the ingest release.
-ingest_image_tag = "58743db"
+ingest_image_tag = "d55c01b"
+
+# sportsagentic/spark-drain image the Airflow stream_drain DAG runs (Airflow Variable spark_drain_image).
+drain_image_tag = "a9a37da"
 
 # E5 is an x86 shape outside the Always Free allowance, so this node is billed.
 node_shape         = "VM.Standard.E5.Flex"
